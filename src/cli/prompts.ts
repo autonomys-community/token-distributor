@@ -346,11 +346,11 @@ export class UserPrompts {
   displayBanner(): void {
     console.log(
       chalk.blue(`
-╔═══════════════════════════════════════════════════════════════╗
-║                    Autonomys Token Distributor                ║
-║                                                               ║
-║  A robust tool for distributing tokens on Autonomys Network   ║
-╚═══════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════╗
+║                    Autonomys Token Distributor                   ║
+║                                                                  ║
+║  A robust tool for distributing tokens on the Autonomys Network  ║
+╚══════════════════════════════════════════════════════════════════╝
     `)
     );
   }
