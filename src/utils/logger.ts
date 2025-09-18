@@ -12,10 +12,16 @@ class Logger {
     this.setupLogger(config);
   }
 
-  private async setupLogger(config: AppConfig): Promise<void> {
-    // Ensure logs directory exists
+  private setupLogger(config: AppConfig): void {
+    // Ensure logs directory exists synchronously if needed
     if (config.logToFile) {
-      await fs.ensureDir(this.logDir);
+      try {
+        fs.ensureDirSync(this.logDir);
+      } catch (error) {
+        console.warn(`Warning: Could not create logs directory: ${error}`);
+        // Fall back to console-only logging
+        config = { ...config, logToFile: false };
+      }
     }
 
     const transports: winston.transport[] = [
