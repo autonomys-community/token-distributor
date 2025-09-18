@@ -5,6 +5,7 @@ import { CSVValidator } from './utils/validation';
 import { TokenDistributor } from './core/distributor';
 import { ResumeManager } from './core/resume-manager';
 import { UserPrompts } from './cli/prompts';
+import { InteractiveFailureHandler } from './cli/failure-handler';
 import Logger from './utils/logger';
 import chalk from 'chalk';
 import fs from 'fs-extra';
@@ -16,6 +17,7 @@ class TokenDistributorApp {
   private distributor: TokenDistributor;
   private resumeManager: ResumeManager;
   private prompts: UserPrompts;
+  private failureHandler: InteractiveFailureHandler;
 
   constructor() {
     try {
@@ -26,9 +28,10 @@ class TokenDistributorApp {
       // Initialize components
       this.logger = new Logger(this.config);
       this.validator = new CSVValidator(this.logger);
-      this.distributor = new TokenDistributor(this.config, this.logger);
-      this.resumeManager = new ResumeManager(this.logger);
       this.prompts = new UserPrompts(this.logger);
+      this.failureHandler = new InteractiveFailureHandler(this.prompts);
+      this.distributor = new TokenDistributor(this.config, this.logger, this.failureHandler);
+      this.resumeManager = new ResumeManager(this.logger);
     } catch (error) {
       console.error('❌ Configuration Error:', error instanceof Error ? error.message : error);
       console.error('\n💡 Please check your .env file and ensure all required values are set.');
@@ -215,13 +218,6 @@ class TokenDistributorApp {
 
   private async executeDistribution(records: any[]): Promise<void> {
     console.log(chalk.blue('\n🚀 Starting token distribution...'));
-    
-    // TODO
-    // Override the handleTransactionFailure method to use prompts
-    const originalHandleFailure = this.distributor['handleTransactionFailure'].bind(this.distributor);
-    this.distributor['handleTransactionFailure'] = async (record: any, index: number, error: any) => {
-      return await this.prompts.handleTransactionFailure(record, index, error, record.attempts || 1);
-    };
 
     let lastProgress = 0;
     

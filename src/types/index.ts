@@ -69,3 +69,12 @@ export interface TransactionResult {
   error?: string;
   gasUsed?: string;
 }
+
+export interface TransactionFailureHandler {
+  handleFailure(
+    _record: DistributionRecord,
+    _index: number,
+    _error: any,
+    _attempts: number
+  ): Promise<'retry' | 'skip' | 'pause' | 'abort'>;
+}

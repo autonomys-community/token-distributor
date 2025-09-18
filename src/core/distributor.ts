@@ -4,7 +4,7 @@ import { ApiPromise } from '@polkadot/api';
 import { Keyring } from '@polkadot/keyring';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
-import { DistributionRecord, DistributionSummary, TransactionResult, AppConfig } from '../types';
+import { DistributionRecord, DistributionSummary, TransactionResult, AppConfig, TransactionFailureHandler } from '../types';
 import { getNetworkConfig } from '../config/networks';
 import Logger from '../utils/logger';
 import { ResumeManager } from './resume-manager';
@@ -15,11 +15,13 @@ export class TokenDistributor {
   private config: AppConfig;
   private logger: Logger;
   private resumeManager: ResumeManager;
+  private failureHandler?: TransactionFailureHandler;
   private isConnected = false;
 
-  constructor(config: AppConfig, logger: Logger) {
+  constructor(config: AppConfig, logger: Logger, failureHandler?: TransactionFailureHandler) {
     this.config = config;
     this.logger = logger;
+    this.failureHandler = failureHandler;
     this.resumeManager = new ResumeManager(logger);
   }
 
@@ -160,7 +162,7 @@ export class TokenDistributor {
           );
 
           // Ask user what to do with failed transaction
-          const action = await this.handleTransactionFailure(record, i, error);
+          const action = await this.handleTransactionFailure(record, i, error, record.attempts || 1);
 
           switch (action) {
             case 'retry':
@@ -271,18 +273,23 @@ export class TokenDistributor {
   private async handleTransactionFailure(
     record: DistributionRecord,
     index: number,
-    error: any
+    error: any,
+    attempts: number
   ): Promise<'retry' | 'skip' | 'pause' | 'abort'> {
-    this.logger.warn('Transaction failed, asking user for action', {
+    // Use injected failure handler if available
+    if (this.failureHandler) {
+      return await this.failureHandler.handleFailure(record, index, error, attempts);
+    }
+
+    // Fallback to default strategy
+    this.logger.warn('Transaction failed, using default retry strategy', {
       address: record.address,
       amount: record.amount,
       error: error.message,
-      attempts: record.attempts,
+      attempts,
     });
 
-    // This will be implemented in the CLI interface
-    // For now, implement a basic retry strategy
-    if ((record.attempts || 0) < 3) {
+    if (attempts < 3) {
       return 'retry';
     } else {
       return 'skip';
