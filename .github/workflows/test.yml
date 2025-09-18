@@ -1,0 +1,71 @@
+name: Test & Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: TypeScript compilation check
+      run: npx tsc --noEmit
+
+    - name: Code linting
+      run: npm run lint
+
+    - name: Code formatting check
+      run: npm run format:check
+
+    - name: Run tests with coverage
+      run: npm run test:coverage
+
+    - name: Check coverage threshold
+      if: matrix.node-version == '20.x'
+      run: |
+        COVERAGE=$(node -e "
+          const fs = require('fs');
+          const coverage = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+          console.log(coverage.total.lines.pct);
+        ")
+        echo "Coverage: ${COVERAGE}%"
+        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+          echo "❌ Coverage ${COVERAGE}% below 80% threshold"
+          exit 1
+        else
+          echo "✅ Coverage meets 80% threshold"
+        fi
+
+    - name: Build project
+      run: npm run build
+
+    - name: Security audit
+      if: matrix.node-version == '20.x'
+      run: npm audit --audit-level moderate
+
+    - name: Upload coverage report
+      if: matrix.node-version == '20.x'
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage/
+        retention-days: 7
