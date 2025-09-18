@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import csv from 'csv-parser';
 import Joi from 'joi';
 import { decodeAddress, encodeAddress } from '@polkadot/util-crypto';
+import { isAddress } from '@autonomys/auto-utils';
 import { DistributionRecord, ValidationResult } from '../types';
 import Logger from './logger';
 
@@ -15,34 +16,62 @@ export class ValidationError extends Error {
   }
 }
 
-// TODO: ensure we're using this function for all address validation
-// Address validation for both Autonomys and Substrate formats using proper SS58 decoding
-function isValidAutonomysAddress(address: string): boolean {
-  // Validates SS58 addresses for both Autonomys (prefix 6094) and Substrate (prefix 42)
-  if (!address || typeof address !== 'string') {
-    return false;
+/**
+ * Address validation using Autonomys SDK
+ */
+interface AddressValidationResult {
+  isValid: boolean;
+  networkType?: 'autonomys' | 'substrate';
+  error?: string;
+}
+
+/**
+ * Primary address validation function using Autonomys SDK
+ * Validates both Autonomys (prefix 6094, "su") and Substrate (prefix 42, "5") addresses
+ * This is the centralized function for all address validation in the application
+ */
+function validateAddress(address: string): AddressValidationResult {
+  if (address === null || address === undefined || typeof address !== 'string') {
+    return { isValid: false, error: 'Address is required and must be a string' };
   }
 
-  // Remove whitespace
+  // Trim whitespace
   address = address.trim();
 
-  try {
-    // Use Polkadot's decodeAddress to validate the address format
-    const decoded = decodeAddress(address);
-
-    // Try to encode with both prefixes to validate the address works with supported networks
-    const autonomysReEncoded = encodeAddress(decoded, 6094); // Autonomys prefix
-    const substrateReEncoded = encodeAddress(decoded, 42); // Standard Substrate prefix
-
-    // Check if the address matches either format
-    const isValidAutonomys = autonomysReEncoded === address;
-    const isValidSubstrate = substrateReEncoded === address;
-
-    return isValidAutonomys || isValidSubstrate;
-  } catch (error) {
-    // If decoding fails, the address is invalid
-    return false;
+  if (address.length === 0) {
+    return { isValid: false, error: 'Address cannot be empty' };
   }
+
+  try {
+    // Use Autonomys SDK for primary validation - it handles both formats
+    const isValidFormat = isAddress(address);
+    
+    if (!isValidFormat) {
+      return { isValid: false, error: 'Invalid SS58 address format' };
+    }
+
+    // Determine network type for informational purposes
+    const networkInfo = getAddressNetworkInfo(address);
+    
+    return { 
+      isValid: true, 
+      networkType: networkInfo?.network.toLowerCase() as 'autonomys' | 'substrate'
+    };
+  } catch (error) {
+    return { 
+      isValid: false, 
+      error: `Address validation failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    };
+  }
+}
+
+/**
+ * Simple boolean validation function for backward compatibility
+ * Uses the enhanced validateAddress function internally
+ */
+function isValidAutonomysAddress(address: string): boolean {
+  const result = validateAddress(address);
+  return result.isValid;
 }
 
 // Get address network prefix for informational purposes
@@ -293,8 +322,11 @@ export class CSVValidator {
 
     if (!address?.trim()) {
       errors.push('Address is required');
-    } else if (!isValidAutonomysAddress(address.trim())) {
-      errors.push('Invalid Autonomys address format');
+    } else {
+      const addressValidation = validateAddress(address.trim());
+      if (!addressValidation.isValid) {
+        errors.push(addressValidation.error || 'Invalid address format');
+      }
     }
 
     if (!amount?.trim()) {
@@ -318,4 +350,4 @@ export const distributionConfigSchema = Joi.object({
   confirmationBlocks: Joi.number().integer().min(1).max(100).default(2),
 });
 
-export { isValidAutonomysAddress, isValidAmount, normalizeAmount, getAddressNetworkInfo };
+export { validateAddress, isValidAutonomysAddress, isValidAmount, normalizeAmount, getAddressNetworkInfo, AddressValidationResult };

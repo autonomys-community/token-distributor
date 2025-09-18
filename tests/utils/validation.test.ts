@@ -1,4 +1,5 @@
 import {
+  validateAddress,
   isValidAutonomysAddress,
   isValidAmount,
   normalizeAmount,
@@ -45,6 +46,72 @@ beforeAll(() => {
 });
 
 describe('Address Validation', () => {
+  describe('validateAddress (SDK-based enhanced validation)', () => {
+    test('should validate correct Autonomys addresses with network type', () => {
+      const result = validateAddress(testAddresses.validAutonomys);
+      expect(result.isValid).toBe(true);
+      expect(result.networkType).toBe('autonomys');
+      expect(result.error).toBeUndefined();
+    });
+
+    test('should validate correct Substrate addresses with network type', () => {
+      const result = validateAddress(testAddresses.validSubstrate);
+      expect(result.isValid).toBe(true);
+      expect(result.networkType).toBe('substrate');
+      expect(result.error).toBeUndefined();
+    });
+
+    test('should provide detailed error messages for invalid addresses', () => {
+      const result = validateAddress(testAddresses.invalidAddress);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Invalid SS58 address format');
+      expect(result.networkType).toBeUndefined();
+    });
+
+    test('should handle empty and null addresses with specific errors', () => {
+      const emptyResult = validateAddress('');
+      expect(emptyResult.isValid).toBe(false);
+      expect(emptyResult.error).toBe('Address cannot be empty');
+
+      const nullResult = validateAddress(null as any);
+      expect(nullResult.isValid).toBe(false);
+      expect(nullResult.error).toBe('Address is required and must be a string');
+
+      const undefinedResult = validateAddress(undefined as any);
+      expect(undefinedResult.isValid).toBe(false);
+      expect(undefinedResult.error).toBe('Address is required and must be a string');
+    });
+
+    test('should handle addresses with whitespace', () => {
+      const addressWithSpaces = `  ${testAddresses.validSubstrate}  `;
+      const result = validateAddress(addressWithSpaces);
+      expect(result.isValid).toBe(true);
+      expect(result.networkType).toBe('substrate');
+    });
+
+    test('should provide specific error messages for malformed addresses', () => {
+      const invalidFormats = [
+        '123456789',
+        'not_an_address',
+        '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQ', // Too short
+        '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY123', // Too long
+        'OGrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY', // Invalid base58 character
+      ];
+
+      invalidFormats.forEach(addr => {
+        const result = validateAddress(addr);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toBe('Invalid SS58 address format');
+      });
+    });
+
+    test('should handle non-string inputs', () => {
+      const result = validateAddress(12345 as any);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Address is required and must be a string');
+    });
+  });
+
   describe('isValidAutonomysAddress', () => {
     test('should validate correct Autonomys addresses', () => {
       expect(isValidAutonomysAddress(testAddresses.validAutonomys)).toBe(true);
@@ -302,7 +369,7 @@ describe('Individual Record Validation', () => {
   test('should reject invalid individual records', () => {
     const result = validator.validateRecord('invalid_address', '-50');
     expect(result.isValid).toBe(false);
-    expect(result.errors).toContain('Invalid Autonomys address format');
+    expect(result.errors).toContain('Invalid SS58 address format');
     expect(result.errors).toContain('Invalid amount format');
   });
 
