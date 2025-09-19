@@ -59,12 +59,15 @@ class TokenDistributorApp {
         
         if (resumeChoice.shouldResume && resumeChoice.resumeData) {
           await this.resumeDistribution(resumeChoice.resumeData);
-          return;
+          console.log(chalk.green('\n✅ Application completed successfully.'));
+          process.exit(0);
         }
       }
 
       // Start new distribution
       await this.startNewDistribution();
+      console.log(chalk.green('\n✅ Application completed successfully.'));
+      process.exit(0);
 
     } catch (error) {
       this.logger.error('Application error', error);
