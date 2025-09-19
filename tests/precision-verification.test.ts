@@ -7,6 +7,45 @@ import {
 import fs from 'fs-extra';
 import path from 'path';
 
+// Mock fs-extra to prevent filesystem operations
+jest.mock('fs-extra', () => ({
+  ensureDir: jest.fn().mockResolvedValue(undefined),
+  remove: jest.fn().mockResolvedValue(undefined),
+  writeFile: jest.fn().mockResolvedValue(undefined),
+  pathExists: jest.fn().mockResolvedValue(true),
+  createReadStream: jest.fn(),
+}));
+
+// Store CSV content for mocking
+let mockCsvContent = '';
+
+// Helper to set mock CSV content for tests
+const setMockCsvContent = (content: string) => {
+  mockCsvContent = content;
+  
+  // Update the mock implementation
+  (fs.createReadStream as jest.Mock).mockReturnValue({
+    pipe: jest.fn().mockReturnValue({
+      on: jest.fn().mockImplementation((event, callback) => {
+        const lines = mockCsvContent.split('\n').filter(line => line.trim());
+        
+        if (event === 'data') {
+          // Parse CSV content and emit row events
+          lines.forEach((line, index) => {
+            const [address, amount] = line.split(',');
+            setTimeout(() => callback({ address: address?.trim(), amount: amount?.trim() }), index + 1);
+          });
+        } else if (event === 'end') {
+          setTimeout(() => callback(), lines.length + 10);
+        } else if (event === 'error') {
+          // Store error callback for potential use
+        }
+        return this;
+      })
+    })
+  });
+};
+
 // Mock logger for tests
 const mockLogger = {
   info: jest.fn(),
@@ -35,15 +74,14 @@ describe('Shannon Precision Verification', () => {
   describe('Edge Case Precision Tests', () => {
     test('1 Shannon (minimum possible amount)', async () => {
       const csvContent = 'sufsKsx4kZ26i7bJXc1TFguysVzjkzsDtE2VDiCEBY2WjyGAj,0.000000000000000001';
-      const csvFile = path.join(tempDir, '1-shannon.csv');
-      await fs.writeFile(csvFile, csvContent);
-
+      
+      setMockCsvContent(csvContent);
       // Test CSV processing maintains exact precision
-      const validation = await validator.validateCSV(csvFile);
+      const validation = await validator.validateCSV('mock-file.csv');
       expect(validation.isValid).toBe(true);
       expect(validation.totalAmount).toBe(1n); // Exact 1 Shannon
 
-      const records = await validator.parseValidatedCSV(csvFile);
+      const records = await validator.parseValidatedCSV('mock-file.csv');
       expect(records[0].amount).toBe(1n); // Exact Shannon amount
 
       // Verify conversion functions maintain precision
@@ -91,11 +129,10 @@ describe('Shannon Precision Verification', () => {
         `sufsKsx4kZ26i7bJXc1TFguysVzjkzsDtE2VDiCEBY2WjyGAj,${amount}`
       );
       const csvContent = csvLines.join('\n');
-      const csvFile = path.join(tempDir, 'mixed-precision.csv');
-      await fs.writeFile(csvFile, csvContent);
-
+      
+      setMockCsvContent(csvContent);
       // Test CSV validation maintains precision
-      const validation = await validator.validateCSV(csvFile);
+      const validation = await validator.validateCSV('mock-file.csv');
       expect(validation.isValid).toBe(true);
       expect(validation.recordCount).toBe(4);
 
@@ -107,7 +144,7 @@ describe('Shannon Precision Verification', () => {
       expect(validation.totalAmount).toBe(expectedTotal);
 
       // Test individual record precision
-      const records = await validator.parseValidatedCSV(csvFile);
+      const records = await validator.parseValidatedCSV('mock-file.csv');
       amounts.forEach((amount, i) => {
         const expectedShannon = ai3ToShannon(amount);
         expect(records[i].amount).toBe(expectedShannon);

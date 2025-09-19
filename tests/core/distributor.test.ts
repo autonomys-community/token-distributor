@@ -32,6 +32,22 @@ jest.mock('@polkadot/util-crypto', () => ({
   cryptoWaitReady: jest.fn(),
 }));
 
+// Mock ResumeManager to prevent filesystem operations
+jest.mock('../../src/core/resume-manager', () => ({
+  ResumeManager: jest.fn().mockImplementation(() => ({
+    saveState: jest.fn().mockResolvedValue(undefined),
+    loadLatestState: jest.fn().mockResolvedValue(null),
+    listResumeFiles: jest.fn().mockResolvedValue([]),
+    loadSpecificState: jest.fn().mockResolvedValue(null),
+    clearState: jest.fn().mockResolvedValue(undefined),
+    clearOldStates: jest.fn().mockResolvedValue(undefined),
+    getResumeDir: jest.fn().mockReturnValue('/mock/resume/dir'),
+    getResumeStats: jest.fn().mockResolvedValue({ totalFiles: 0, oldestFile: null, newestFile: null }),
+    analyzeProgress: jest.fn().mockResolvedValue({ progressPercentage: 0, estimatedTimeRemaining: 0 }),
+    exportResumeData: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
+
 describe('TokenDistributor', () => {
   let distributor: TokenDistributor;
   let mockConfig: AppConfig;

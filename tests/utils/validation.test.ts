@@ -14,6 +14,45 @@ import { Keyring } from '@polkadot/keyring';
 import fs from 'fs-extra';
 import path from 'path';
 
+// Mock fs-extra to prevent filesystem operations
+jest.mock('fs-extra', () => ({
+  ensureDir: jest.fn().mockResolvedValue(undefined),
+  remove: jest.fn().mockResolvedValue(undefined),
+  writeFile: jest.fn().mockResolvedValue(undefined),
+  pathExists: jest.fn().mockResolvedValue(true),
+  createReadStream: jest.fn(),
+}));
+
+// Store CSV content for mocking
+let mockCsvContent = '';
+
+// Helper to set mock CSV content for tests
+const setMockCsvContent = (content: string) => {
+  mockCsvContent = content;
+  
+  // Update the mock implementation
+  (fs.createReadStream as jest.Mock).mockReturnValue({
+    pipe: jest.fn().mockReturnValue({
+      on: jest.fn().mockImplementation((event, callback) => {
+        const lines = mockCsvContent.split('\n').filter(line => line.trim());
+        
+        if (event === 'data') {
+          // Parse CSV content and emit row events
+          lines.forEach((line, index) => {
+            const [address, amount] = line.split(',');
+            setTimeout(() => callback({ address: address?.trim(), amount: amount?.trim() }), index + 1);
+          });
+        } else if (event === 'end') {
+          setTimeout(() => callback(), lines.length + 10);
+        } else if (event === 'error') {
+          // Store error callback for potential use
+        }
+        return this;
+      })
+    })
+  });
+};
+
 // Mock logger for tests
 const mockLogger = {
   info: jest.fn(),
@@ -351,10 +390,8 @@ describe('CSV Validation', () => {
       `${testAddresses.validSubstrate},250.0`,
     ].join('\n');
 
-    const csvFile = path.join(tempDir, 'valid.csv');
-    await fs.writeFile(csvFile, csvContent);
-
-    const result = await validator.validateCSV(csvFile);
+    setMockCsvContent(csvContent);
+    const result = await validator.validateCSV('mock-file.csv');
 
     expect(result.isValid).toBe(true);
     expect(result.errors).toHaveLength(0);
@@ -368,10 +405,8 @@ describe('CSV Validation', () => {
       '\n'
     );
 
-    const csvFile = path.join(tempDir, 'invalid_address.csv');
-    await fs.writeFile(csvFile, csvContent);
-
-    const result = await validator.validateCSV(csvFile);
+    setMockCsvContent(csvContent);
+    const result = await validator.validateCSV('mock-file.csv');
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain('Line 2: Invalid SS58 address format: invalid_address');
@@ -383,10 +418,8 @@ describe('CSV Validation', () => {
       `${testAddresses.validSubstrate},-50`,
     ].join('\n');
 
-    const csvFile = path.join(tempDir, 'invalid_amount.csv');
-    await fs.writeFile(csvFile, csvContent);
-
-    const result = await validator.validateCSV(csvFile);
+    setMockCsvContent(csvContent);
+    const result = await validator.validateCSV('mock-file.csv');
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain('Line 2: Invalid amount format: -50');
@@ -398,10 +431,8 @@ describe('CSV Validation', () => {
       `${testAddresses.validAutonomys},250.0`,
     ].join('\n');
 
-    const csvFile = path.join(tempDir, 'duplicates.csv');
-    await fs.writeFile(csvFile, csvContent);
-
-    const result = await validator.validateCSV(csvFile);
+    setMockCsvContent(csvContent);
+    const result = await validator.validateCSV('mock-file.csv');
 
     expect(result.duplicates).toHaveLength(1);
     expect(result.duplicates[0].address).toBe(testAddresses.validAutonomys);
@@ -409,27 +440,25 @@ describe('CSV Validation', () => {
   });
 
   test('should handle empty CSV file', async () => {
-    const csvFile = path.join(tempDir, 'empty.csv');
-    await fs.writeFile(csvFile, '');
-
-    const result = await validator.validateCSV(csvFile);
+    setMockCsvContent('');
+    const result = await validator.validateCSV('mock-file.csv');
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain('No valid records found in CSV file');
   });
 
   test('should handle missing CSV file', async () => {
-    const csvFile = path.join(tempDir, 'nonexistent.csv');
-
-    await expect(validator.validateCSV(csvFile)).rejects.toThrow('CSV file does not exist');
+    // Mock pathExists to return false for this test
+    (fs.pathExists as jest.Mock).mockResolvedValueOnce(false);
+    
+    await expect(validator.validateCSV('nonexistent.csv')).rejects.toThrow('CSV file does not exist');
   });
 
   test('should warn about large amounts', async () => {
     const csvContent = `${testAddresses.validAutonomys},2000000`;
-    const csvFile = path.join(tempDir, 'large_amount.csv');
-    await fs.writeFile(csvFile, csvContent);
-
-    const result = await validator.validateCSV(csvFile);
+    
+    setMockCsvContent(csvContent);
+    const result = await validator.validateCSV('mock-file.csv');
 
     expect(result.isValid).toBe(true);
     expect(result.warnings).toContain(
@@ -439,10 +468,9 @@ describe('CSV Validation', () => {
 
   test('should warn about very small amounts in Shannon units', async () => {
     const csvContent = `${testAddresses.validAutonomys},0.0000000000000005`; // 500 Shannon
-    const csvFile = path.join(tempDir, 'small_amount.csv');
-    await fs.writeFile(csvFile, csvContent);
-
-    const result = await validator.validateCSV(csvFile);
+    
+    setMockCsvContent(csvContent);
+    const result = await validator.validateCSV('mock-file.csv');
 
     expect(result.isValid).toBe(true);
     expect(result.warnings.length).toBeGreaterThan(0);
@@ -455,10 +483,8 @@ describe('CSV Validation', () => {
       `${testAddresses.validSubstrate},250.0`,
     ].join('\n');
 
-    const csvFile = path.join(tempDir, 'parse_test.csv');
-    await fs.writeFile(csvFile, csvContent);
-
-    const records = await validator.parseValidatedCSV(csvFile);
+    setMockCsvContent(csvContent);
+    const records = await validator.parseValidatedCSV('mock-file.csv');
 
     expect(records).toHaveLength(2);
     expect(records[0].address).toBe(testAddresses.validAutonomys);
