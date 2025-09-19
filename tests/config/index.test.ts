@@ -97,6 +97,7 @@ describe('Configuration', () => {
         logToFile: true,
         confirmationBlocks: 2,
         batchSize: 10,
+        gasBufferAi3: 1,
       };
 
       expect(() => validateConfig(config)).not.toThrow();
@@ -110,6 +111,7 @@ describe('Configuration', () => {
         logToFile: true,
         confirmationBlocks: 2,
         batchSize: 10,
+        gasBufferAi3: 1,
       };
 
       expect(() => validateConfig(config)).toThrow('DISTRIBUTOR_PRIVATE_KEY is required');
@@ -125,6 +127,7 @@ describe('Configuration', () => {
           logToFile: true,
           confirmationBlocks: 2,
           batchSize: 10,
+          gasBufferAi3: 1,
         },
         {
           network: 'chronos',
@@ -133,6 +136,7 @@ describe('Configuration', () => {
           logToFile: true,
           confirmationBlocks: 2,
           batchSize: 10,
+          gasBufferAi3: 1,
         },
       ];
 
@@ -158,6 +162,7 @@ describe('Configuration', () => {
           logToFile: true,
           confirmationBlocks: 2,
           batchSize: 10,
+          gasBufferAi3: 1,
         };
 
         expect(() => validateConfig(config)).toThrow(
@@ -174,6 +179,7 @@ describe('Configuration', () => {
         logToFile: true,
         confirmationBlocks: 2,
         batchSize: 10,
+        gasBufferAi3: 1,
       };
 
       // Test confirmation blocks

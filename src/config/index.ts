@@ -50,6 +50,7 @@ export function loadConfig(): AppConfig {
     logToFile: getEnvVarAsBoolean('LOG_TO_FILE', true),
     confirmationBlocks: getEnvVarAsNumber('CONFIRMATION_BLOCKS', 2),
     batchSize: getEnvVarAsNumber('BATCH_SIZE', 10),
+    gasBufferAi3: getEnvVarAsNumber('GAS_BUFFER_AI3', 1),
   };
 }
 

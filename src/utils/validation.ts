@@ -189,13 +189,14 @@ function formatAi3Amount(shannonAmount: bigint): string {
   return shannonToAi3(shannonAmount);
 }
 
+
 /**
- * Convert Shannon bigint to string for Auto SDK transfer function
- * @param shannonAmount - Shannon amount as bigint
- * @returns Shannon amount as string for Auto SDK
+ * Convert AI3 amount (number) to Shannon (bigint)
+ * @param ai3Amount - Amount in AI3 as number
+ * @returns Shannon amount as bigint
  */
-function shannonToString(shannonAmount: bigint): string {
-  return shannonAmount.toString();
+function ai3NumberToShannon(ai3Amount: number): bigint {
+  return ai3ToShannon(ai3Amount.toString());
 }
 
 export class CSVValidator {
@@ -440,9 +441,9 @@ export {
   isValidAmount, 
   normalizeAmount, 
   ai3ToShannon,
+  ai3NumberToShannon,
   shannonToAi3,
   formatAi3Amount,
-  shannonToString,
   getAddressNetworkInfo, 
   AddressValidationResult 
 };

@@ -37,6 +37,7 @@ export interface AppConfig {
   logToFile: boolean;
   confirmationBlocks: number;
   batchSize: number;
+  gasBufferAi3: number;
 }
 
 export interface ValidationResult {

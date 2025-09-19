@@ -62,6 +62,7 @@ LOG_LEVEL=info
 LOG_TO_FILE=true
 CONFIRMATION_BLOCKS=2
 BATCH_SIZE=10
+GAS_BUFFER_AI3=1
 ```
 
 ## Usage
@@ -138,6 +139,7 @@ npm run distribute
 | `LOG_TO_FILE` | Enable file logging | `true` | `true`, `false` |
 | `CONFIRMATION_BLOCKS` | Block confirmations | `2` | 1-100 |
 | `BATCH_SIZE` | Processing batch size | `10` | 1-100 |
+| `GAS_BUFFER_AI3` | Gas reserve (AI3 tokens) | `1` | Any positive number |
 
 ### Network Endpoints
 

@@ -8,7 +8,7 @@ import { DistributionRecord, DistributionSummary, TransactionResult, AppConfig, 
 import { getNetworkConfig } from '../config/networks';
 import Logger from '../utils/logger';
 import { ResumeManager } from './resume-manager';
-import { ai3ToShannon, shannonToString } from '../utils/validation';
+import { ai3NumberToShannon } from '../utils/validation';
 
 export class TokenDistributor {
   private api?: ApiPromise;
@@ -326,9 +326,8 @@ export class TokenDistributor {
     const currentBalanceString = await this.checkDistributorBalance();
     const currentBalance = BigInt(currentBalanceString);
 
-    // TODO: Make gas buffer configurable and a number
-    // Add 1 AI3 token in Shannon for gas fees
-    const gasBuffer = ai3ToShannon('1');
+    // Add configurable AI3 tokens in Shannon for gas fees
+    const gasBuffer = ai3NumberToShannon(this.config.gasBufferAi3);
     const requiredAmount = totalAmount + gasBuffer;
 
     const sufficient = currentBalance >= requiredAmount;
