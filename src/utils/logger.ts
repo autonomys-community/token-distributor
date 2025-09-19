@@ -2,6 +2,7 @@ import winston from 'winston';
 import path from 'path';
 import fs from 'fs-extra';
 import { AppConfig } from '../types';
+import { bigIntReplacer } from './bigint-json';
 
 class Logger {
   private winston!: winston.Logger;
@@ -30,7 +31,7 @@ class Logger {
           winston.format.colorize(),
           winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
           winston.format.printf(({ timestamp, level, message, ...meta }) => {
-            const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+            const metaStr = Object.keys(meta).length ? JSON.stringify(meta, bigIntReplacer, 2) : '';
             return `${timestamp} [${level}]: ${message} ${metaStr}`;
           })
         ),

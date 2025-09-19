@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { DistributionRecord, DistributionSummary, ResumeData } from '../types';
 import Logger from '../utils/logger';
+import { stringifyWithBigInt, convertDistributionStringsToBigInt } from '../utils/bigint-json';
 
 export class ResumeManager {
   private resumeDir: string;
@@ -30,7 +31,9 @@ export class ResumeManager {
       const filename = this.generateResumeFilename();
       const filepath = path.join(this.resumeDir, filename);
 
-      await fs.writeJSON(filepath, resumeData, { spaces: 2 });
+      // Use centralized BigInt serialization
+      const serializedData = stringifyWithBigInt(resumeData, 2);
+      await fs.writeFile(filepath, serializedData);
 
       this.logger.debug('Resume state saved', {
         filepath,
@@ -63,8 +66,9 @@ export class ResumeManager {
 
       const resumeData = (await fs.readJSON(filepath)) as ResumeData;
 
-      // Convert timestamp back to Date object
+      // Convert timestamp back to Date object and BigInt strings back to BigInt
       resumeData.timestamp = new Date(resumeData.timestamp);
+      convertDistributionStringsToBigInt(resumeData);
 
       this.logger.info('Resume state loaded', {
         filepath,
@@ -107,6 +111,7 @@ export class ResumeManager {
 
       const resumeData = (await fs.readJSON(filepath)) as ResumeData;
       resumeData.timestamp = new Date(resumeData.timestamp);
+      convertDistributionStringsToBigInt(resumeData);
 
       return resumeData;
     } catch (error) {
@@ -154,6 +159,7 @@ export class ResumeManager {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     return `resume-${timestamp}.json`;
   }
+
 
   getResumeDir(): string {
     return this.resumeDir;
@@ -245,7 +251,9 @@ export class ResumeManager {
         records: resumeData.records,
       };
 
-      await fs.writeJSON(outputPath, exportData, { spaces: 2 });
+      // Use centralized BigInt serialization
+      const serializedData = stringifyWithBigInt(exportData, 2);
+      await fs.writeFile(outputPath, serializedData);
 
       this.logger.info('Resume data exported', {
         outputPath,
