@@ -173,7 +173,16 @@ export class TokenDistributor {
               await this.pauseDistribution(records, summary, i);
               return summary;
             case 'abort':
-              throw new Error('Distribution aborted by user');
+              summary.abortedByUser = true;
+              summary.endTime = new Date();
+              await this.resumeManager.saveState(records, summary, i + 1);
+              this.logger.info('Distribution aborted by user', {
+                completedRecords: summary.completed,
+                failedRecords: summary.failed,
+                skippedRecords: summary.skipped,
+                totalRecords: summary.totalRecords
+              });
+              return summary;
           }
         }
 

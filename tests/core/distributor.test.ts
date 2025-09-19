@@ -202,4 +202,43 @@ describe('TokenDistributor', () => {
       expect(result.requiredAmount).toBe(distributionAmount + ai3NumberToShannon(0.5)); // 100 AI3 + 0.5 AI3 gas
     });
   });
+
+  describe('user abort handling', () => {
+    test('should handle user abort gracefully without throwing exception', async () => {
+      // Create a mock failure handler that returns 'abort'
+      const abortFailureHandler = {
+        handleFailure: jest.fn().mockResolvedValue('abort')
+      };
+
+      const distributorWithAbort = new TokenDistributor(mockConfig, mockLogger, abortFailureHandler);
+      
+      // Mock the distribute method dependencies and set internal state
+      jest.spyOn(distributorWithAbort, 'initialize').mockResolvedValue();
+      jest.spyOn(distributorWithAbort, 'checkDistributorBalance').mockResolvedValue('1000000000000000000000');
+      
+      // Set internal connection state
+      (distributorWithAbort as any).isConnected = true;
+      (distributorWithAbort as any).api = {}; // Mock API
+      (distributorWithAbort as any).account = {}; // Mock account
+      
+      // Mock executeTransfer to throw an error (to trigger failure handler)
+      jest.spyOn(distributorWithAbort as any, 'executeTransfer').mockRejectedValue(new Error('Mock transaction error'));
+
+      const records = [{
+        address: 'test-address',
+        amount: BigInt('1000000000000000000'),
+        status: 'pending' as const
+      }];
+
+      // This should not throw an exception
+      const result = await distributorWithAbort.distribute(records);
+
+      expect(result.abortedByUser).toBe(true);
+      expect(result.endTime).toBeDefined();
+      expect(mockLogger.info).toHaveBeenCalledWith('Distribution aborted by user', expect.any(Object));
+      
+      // Verify the abort failure handler was called
+      expect(abortFailureHandler.handleFailure).toHaveBeenCalled();
+    });
+  });
 });

@@ -21,6 +21,7 @@ export interface DistributionSummary {
   startTime: Date;
   endTime?: Date;
   resumedFrom?: number;
+  abortedByUser?: boolean; // Indicates user chose to abort distribution
 }
 
 export interface NetworkConfig {

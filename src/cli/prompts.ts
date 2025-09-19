@@ -309,17 +309,33 @@ export class UserPrompts {
   }
 
   async showDistributionComplete(summary: any): Promise<void> {
-    console.log(chalk.green('\n✅ Distribution Complete!'));
-    console.log(chalk.white(`Total Records: ${chalk.yellow(summary.totalRecords)}`));
-    console.log(chalk.white(`Completed: ${chalk.green(summary.completed)}`));
-    console.log(chalk.white(`Failed: ${chalk.red(summary.failed)}`));
-    console.log(chalk.white(`Skipped: ${chalk.yellow(summary.skipped)}`));
-    console.log(
-      chalk.white(`Duration: ${this.formatDuration(summary.startTime, summary.endTime)}`)
-    );
+    if (summary.abortedByUser) {
+      console.log(chalk.yellow('\n⏹️ Distribution Aborted'));
+      console.log(chalk.white('You chose to stop the distribution.'));
+      console.log(chalk.white(`Progress before abort: ${chalk.cyan(summary.completed)}/${chalk.cyan(summary.totalRecords)} transactions`));
+      if (summary.completed > 0) {
+        console.log(chalk.white(`Completed: ${chalk.green(summary.completed)}`));
+      }
+      if (summary.failed > 0) {
+        console.log(chalk.white(`Failed: ${chalk.red(summary.failed)}`));
+      }
+      if (summary.skipped > 0) {
+        console.log(chalk.white(`Skipped: ${chalk.yellow(summary.skipped)}`));
+      }
+      console.log(chalk.blue('\n💾 Your progress has been saved. You can resume the distribution later.'));
+    } else {
+      console.log(chalk.green('\n✅ Distribution Complete!'));
+      console.log(chalk.white(`Total Records: ${chalk.yellow(summary.totalRecords)}`));
+      console.log(chalk.white(`Completed: ${chalk.green(summary.completed)}`));
+      console.log(chalk.white(`Failed: ${chalk.red(summary.failed)}`));
+      console.log(chalk.white(`Skipped: ${chalk.yellow(summary.skipped)}`));
+      console.log(
+        chalk.white(`Duration: ${this.formatDuration(summary.startTime, summary.endTime)}`)
+      );
 
-    if (summary.failed > 0) {
-      console.log(chalk.yellow('\n⚠️  Some transactions failed. Check the logs for details.'));
+      if (summary.failed > 0) {
+        console.log(chalk.yellow('\n⚠️  Some transactions failed. Check the logs for details.'));
+      }
     }
 
     await inquirer.prompt([
