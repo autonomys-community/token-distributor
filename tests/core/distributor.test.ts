@@ -59,6 +59,10 @@ describe('TokenDistributor', () => {
       logTransactionSuccess: jest.fn(),
       logTransactionFailure: jest.fn(),
       logDistributionStart: jest.fn(),
+      logDistributionPaused: jest.fn(),
+      logDistributionComplete: jest.fn(),
+      logAccountInfo: jest.fn(),
+      logDistributionResumed: jest.fn(),
     } as any;
 
     distributor = new TokenDistributor(mockConfig, mockLogger);
@@ -239,6 +243,53 @@ describe('TokenDistributor', () => {
       
       // Verify the abort failure handler was called
       expect(abortFailureHandler.handleFailure).toHaveBeenCalled();
+    });
+
+    test('should retry failed transactions when resuming', async () => {
+      const mockFailureHandler = {
+        handleFailure: jest.fn().mockResolvedValue('pause')
+      };
+
+      const distributorWithPause = new TokenDistributor(mockConfig, mockLogger, mockFailureHandler);
+      
+      // Mock the distribute method dependencies and set internal state
+      jest.spyOn(distributorWithPause, 'initialize').mockResolvedValue();
+      jest.spyOn(distributorWithPause, 'checkDistributorBalance').mockResolvedValue('1000000000000000000000');
+      
+      // Set internal connection state
+      (distributorWithPause as any).isConnected = true;
+      (distributorWithPause as any).api = {};
+      (distributorWithPause as any).account = {};
+      
+      // Mock executeTransfer to fail on first attempt, succeed on second
+      let callCount = 0;
+      jest.spyOn(distributorWithPause as any, 'executeTransfer').mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error('First attempt fails');
+        }
+        return { success: true, transactionHash: 'hash123', blockNumber: 100 };
+      });
+
+      const records = [{
+        address: 'test-address',
+        amount: BigInt('1000000000000000000'),
+        status: 'pending' as const
+      }];
+
+      // First distribution should pause after failure
+      const firstResult = await distributorWithPause.distribute(records);
+      expect(firstResult.failed).toBe(1);
+      expect(records[0].status).toBe('failed');
+
+      // Reset the mock to succeed on next call
+      mockFailureHandler.handleFailure.mockResolvedValue('retry');
+
+      // Resume distribution should retry the failed transaction
+      const secondResult = await distributorWithPause.distribute(records, 0);
+      expect(secondResult.completed).toBe(1);
+      expect(secondResult.failed).toBe(0);
+      expect(records[0].status).toBe('completed');
     });
   });
 });

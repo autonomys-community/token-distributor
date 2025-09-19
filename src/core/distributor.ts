@@ -116,6 +116,13 @@ export class TokenDistributor {
           continue;
         }
 
+        // Reset failed transactions for retry on resume
+        if (record.status === 'failed') {
+          record.status = 'pending';
+          record.error = undefined;
+          // Keep attempt count for tracking
+        }
+
         this.logger.logTransactionStart(record.address, record.amount, i);
 
         try {
@@ -307,10 +314,11 @@ export class TokenDistributor {
   private async pauseDistribution(
     records: DistributionRecord[],
     summary: DistributionSummary,
-    lastIndex: number
+    currentIndex: number
   ): Promise<void> {
-    this.logger.logDistributionPaused(lastIndex, 'User requested pause');
-    await this.resumeManager.saveState(records, summary, lastIndex);
+    this.logger.logDistributionPaused(currentIndex, 'User requested pause');
+    // Save the current index so we can retry the failed transaction on resume
+    await this.resumeManager.saveState(records, summary, currentIndex);
   }
 
   private delay(ms: number): Promise<void> {
