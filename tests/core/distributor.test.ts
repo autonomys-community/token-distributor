@@ -63,6 +63,8 @@ describe('TokenDistributor', () => {
       logDistributionComplete: jest.fn(),
       logAccountInfo: jest.fn(),
       logDistributionResumed: jest.fn(),
+      logValidationResults: jest.fn(),
+      logDistributionError: jest.fn(),
     } as any;
 
     distributor = new TokenDistributor(mockConfig, mockLogger);
@@ -290,6 +292,42 @@ describe('TokenDistributor', () => {
       expect(secondResult.completed).toBe(1);
       expect(secondResult.failed).toBe(0);
       expect(records[0].status).toBe('completed');
+    });
+
+    test('should handle pause correctly without setting endTime', async () => {
+      const mockFailureHandler = {
+        handleFailure: jest.fn().mockResolvedValue('pause')
+      };
+
+      const distributorWithPause = new TokenDistributor(mockConfig, mockLogger, mockFailureHandler);
+      
+      // Mock the distribute method dependencies and set internal state
+      jest.spyOn(distributorWithPause, 'initialize').mockResolvedValue();
+      jest.spyOn(distributorWithPause, 'checkDistributorBalance').mockResolvedValue('1000000000000000000000');
+      
+      // Set internal connection state
+      (distributorWithPause as any).isConnected = true;
+      (distributorWithPause as any).api = {};
+      (distributorWithPause as any).account = {};
+      
+      // Mock executeTransfer to fail (trigger pause)
+      jest.spyOn(distributorWithPause as any, 'executeTransfer').mockRejectedValue(new Error('Transaction failed'));
+
+      const records = [{
+        address: 'test-address',
+        amount: BigInt('1000000000000000000'),
+        status: 'pending' as const
+      }];
+
+      // Distribution should pause after failure
+      const result = await distributorWithPause.distribute(records);
+      
+      // Verify pause behavior
+      expect(result.failed).toBe(1);
+      expect(result.endTime).toBeUndefined(); // endTime should NOT be set on pause
+      expect(result.abortedByUser).toBeUndefined(); // abortedByUser should NOT be set on pause
+      expect(records[0].status).toBe('failed');
+      expect(mockLogger.logDistributionPaused).toHaveBeenCalledWith(0, 'User requested pause');
     });
   });
 });
