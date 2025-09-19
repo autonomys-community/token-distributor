@@ -90,6 +90,17 @@ describe('Shannon Precision Verification', () => {
       expect(formatAi3Amount(1n)).toBe('0.000000000000000001');
     });
 
+    test('Very small amounts below existential deposit should generate warnings', async () => {
+      const csvContent = 'sufsKsx4kZ26i7bJXc1TFguysVzjkzsDtE2VDiCEBY2WjyGAj,0.000000000000000001';
+      
+      setMockCsvContent(csvContent);
+      // Test CSV processing with very small amount
+      const validation = await validator.validateCSV('mock-file.csv');
+      expect(validation.isValid).toBe(true); // Valid but with warning
+      expect(validation.warnings.length).toBeGreaterThan(0);
+      expect(validation.warnings.some(w => w.includes('below existential deposit'))).toBe(true);
+    });
+
     test('1 billion AI3 (maximum test amount)', () => {
       const oneBillionAI3 = '1000000000';
       const expectedShannon = 1000000000000000000000000000n; // 1B * 10^18
@@ -119,7 +130,8 @@ describe('Shannon Precision Verification', () => {
 
     test('Mixed precision CSV processing', async () => {
       const amounts = [
-        '0.000000000000000001', // 1 Shannon
+        '0.000000000000000001', // 1 Shannon (minimum)
+        '0.000001',             // Existential deposit
         '0.5',                  // 0.5 AI3
         '1.123456789012345678', // Max precision
         '1000000',              // 1 Million AI3
@@ -134,7 +146,7 @@ describe('Shannon Precision Verification', () => {
       // Test CSV validation maintains precision
       const validation = await validator.validateCSV('mock-file.csv');
       expect(validation.isValid).toBe(true);
-      expect(validation.recordCount).toBe(4);
+      expect(validation.recordCount).toBe(5);
 
       // Calculate expected total in Shannon using BigInt
       const expectedTotal = amounts.reduce((sum, amount) => {

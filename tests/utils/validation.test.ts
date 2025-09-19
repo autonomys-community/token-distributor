@@ -467,7 +467,7 @@ describe('CSV Validation', () => {
   });
 
   test('should warn about very small amounts in Shannon units', async () => {
-    const csvContent = `${testAddresses.validAutonomys},0.0000000000000005`; // 500 Shannon
+    const csvContent = `${testAddresses.validAutonomys},0.000000000000000005`; // 5 Shannon
     
     setMockCsvContent(csvContent);
     const result = await validator.validateCSV('mock-file.csv');
@@ -475,6 +475,28 @@ describe('CSV Validation', () => {
     expect(result.isValid).toBe(true);
     expect(result.warnings.length).toBeGreaterThan(0);
     expect(result.warnings.some(w => w.includes('Shannon') && w.includes('verify precision'))).toBe(true);
+  });
+
+  test('should warn about amounts below existential deposit', async () => {
+    const csvContent = `${testAddresses.validAutonomys},0.0000000000000005`; // 500 Shannon (below ED)
+    
+    setMockCsvContent(csvContent);
+    const result = await validator.validateCSV('mock-file.csv');
+
+    expect(result.isValid).toBe(true); // Valid but with warnings
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings.some(w => w.includes('below existential deposit'))).toBe(true);
+  });
+
+  test('should accept amounts at existential deposit threshold', async () => {
+    const csvContent = `${testAddresses.validAutonomys},0.000001`; // Exactly ED
+    
+    setMockCsvContent(csvContent);
+    const result = await validator.validateCSV('mock-file.csv');
+
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+    expect(result.totalAmount).toBe(1000000000000n); // ED in Shannon
   });
 
   test('should parse validated CSV correctly', async () => {

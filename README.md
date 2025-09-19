@@ -12,8 +12,9 @@ A robust, production-ready tool for distributing tokens on the Autonomys Network
 
 📊 **Comprehensive Validation**
 - CSV format validation
-- Address format verification
-- Amount validation
+- Address format verification (Autonomys "su" and Substrate "5" addresses)
+- Amount validation with Shannon-level precision (18 decimals)
+- Existential deposit warnings (amounts below 0.000001 AI3)
 - Duplicate detection
 
 🌐 **Multi-Network Support**
@@ -83,8 +84,14 @@ su9Op4LrHeyN0FZhHSlxrvpZKqBxgGcF67WEp7Xvqof6oGS,75.25
 - Addresses must be valid SS58 format addresses:
   - **Autonomys addresses** (prefix 6094): start with "su" 
   - **Substrate addresses** (prefix 42): start with "5"
-- Amounts must be positive decimal numbers
+- Amounts must be positive decimal numbers with up to 18 decimal places
 - One record per line
+
+**💡 Existential Deposit Notice:**
+- Amounts below **0.000001 AI3** will generate warnings
+- Such transfers may fail for new accounts or accounts with insufficient balance
+- They work fine for existing accounts with sufficient balance or smart contracts
+- The tool will proceed with distribution but notify you of potential issues
 
 ### Running the Distributor
 

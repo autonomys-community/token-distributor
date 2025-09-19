@@ -116,6 +116,22 @@ function isValidAmount(amount: string): boolean {
 }
 
 /**
+ * Check if amount is below existential deposit threshold
+ * Note: Amounts below ED may fail for new accounts or accounts with insufficient balance,
+ * but are valid for existing accounts with sufficient balance or contracts
+ * @param amount - Amount in AI3 as string
+ * @returns true if amount meets ED requirement
+ */
+function meetsExistentialDeposit(amount: string): boolean {
+  try {
+    const shannonAmount = ai3ToShannon(amount);
+    return shannonAmount >= EXISTENTIAL_DEPOSIT_SHANNON;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Shannon utility functions for Autonomys AI3 token precision
  * 1 AI3 = 10^18 Shannon (similar to how 1 ETH = 10^18 wei)
  */
@@ -123,6 +139,10 @@ function isValidAmount(amount: string): boolean {
 // Constants for Shannon precision
 const SHANNON_DECIMALS = 18;
 const SHANNON_MULTIPLIER = BigInt(10) ** BigInt(SHANNON_DECIMALS);
+
+// Existential Deposit: 0.000001 AI3 = 1,000,000,000,000 Shannon
+const EXISTENTIAL_DEPOSIT_AI3 = '0.000001';
+const EXISTENTIAL_DEPOSIT_SHANNON = BigInt(1000000000000);
 
 /**
  * Convert AI3 amount (decimal string) to Shannon (smallest unit)
@@ -267,6 +287,11 @@ export class CSVValidator {
           if (!isValidAmount(amount)) {
             errors.push(`Line ${currentLineNumber}: Invalid amount format: ${amount}`);
             return;
+          }
+
+          // Warn about amounts below existential deposit
+          if (!meetsExistentialDeposit(amount)) {
+            warnings.push(`Line ${currentLineNumber}: Amount ${amount} AI3 is below existential deposit (${EXISTENTIAL_DEPOSIT_AI3} AI3). This may fail for new accounts or accounts with insufficient balance.`);
           }
 
           // Convert to Shannon for precise arithmetic
@@ -445,5 +470,8 @@ export {
   shannonToAi3,
   formatAi3Amount,
   getAddressNetworkInfo, 
-  AddressValidationResult 
+  AddressValidationResult,
+  meetsExistentialDeposit,
+  EXISTENTIAL_DEPOSIT_AI3,
+  EXISTENTIAL_DEPOSIT_SHANNON
 };
