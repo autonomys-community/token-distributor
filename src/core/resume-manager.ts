@@ -16,7 +16,8 @@ export class ResumeManager {
   async saveState(
     records: DistributionRecord[],
     summary: DistributionSummary,
-    lastProcessedIndex: number
+    lastProcessedIndex: number,
+    sourceFilename?: string
   ): Promise<void> {
     try {
       await fs.ensureDir(this.resumeDir);
@@ -26,6 +27,7 @@ export class ResumeManager {
         summary,
         lastProcessedIndex,
         timestamp: new Date(),
+        sourceFilename,
       };
 
       const filename = this.generateResumeFilename();

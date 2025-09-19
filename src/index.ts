@@ -147,9 +147,9 @@ class TokenDistributorApp {
       const records = await this.validator.parseValidatedCSV(csvPath);
 
       if (dryRun) {
-        await this.executeDryRun(records);
+        await this.executeDryRun(records, csvPath);
       } else {
-        await this.executeDistribution(records);
+        await this.executeDistribution(records, csvPath);
       }
 
     } catch (error) {
@@ -171,7 +171,8 @@ class TokenDistributorApp {
       
       const summary = await this.distributor.distribute(
         resumeData.records, 
-        resumeData.lastProcessedIndex
+        resumeData.lastProcessedIndex,
+        resumeData.sourceFilename
       );
 
       await this.prompts.showDistributionComplete(summary);
@@ -184,7 +185,7 @@ class TokenDistributorApp {
     }
   }
 
-  private async executeDryRun(records: any[]): Promise<void> {
+  private async executeDryRun(records: any[], sourceFilename?: string): Promise<void> {
     console.log(chalk.blue('\n🧪 Executing Dry Run...'));
     console.log(chalk.gray('(No actual transactions will be sent)\n'));
 
@@ -215,11 +216,11 @@ class TokenDistributorApp {
       );
 
       if (proceedWithReal) {
-        await this.executeDistribution(records);
+        await this.executeDistribution(records, sourceFilename);
       }
   }
 
-  private async executeDistribution(records: any[]): Promise<void> {
+  private async executeDistribution(records: any[], sourceFilename?: string): Promise<void> {
     console.log(chalk.blue('\n🚀 Starting token distribution...'));
 
     let lastProgress = 0;
@@ -234,7 +235,7 @@ class TokenDistributorApp {
     }, 1000);
 
     try {
-      const summary = await this.distributor.distribute(records);
+      const summary = await this.distributor.distribute(records, 0, sourceFilename);
       
       clearInterval(progressTracker);
       console.log('\n'); // New line after progress bar

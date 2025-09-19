@@ -8,6 +8,7 @@ export interface DistributionRecord {
   error?: string;
   attempts?: number;
   timestamp?: Date;
+  sourceRowNumber?: number; // Row number from original CSV file
 }
 
 export interface DistributionSummary {
@@ -59,6 +60,7 @@ export interface ResumeData {
   summary: DistributionSummary;
   lastProcessedIndex: number;
   timestamp: Date;
+  sourceFilename?: string; // Original CSV filename for logging
 }
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'verbose' | 'debug';

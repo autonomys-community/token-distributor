@@ -9,6 +9,7 @@ import { getNetworkConfig } from '../config/networks';
 import Logger from '../utils/logger';
 import { ResumeManager } from './resume-manager';
 import { ai3NumberToShannon } from '../utils/validation';
+import { CSVTransactionLogger } from '../utils/csv-logger';
 
 export class TokenDistributor {
   private api?: ApiPromise;
@@ -81,10 +82,19 @@ export class TokenDistributor {
 
   async distribute(
     records: DistributionRecord[],
-    resumeFromIndex: number = 0
+    resumeFromIndex: number = 0,
+    sourceFilename?: string
   ): Promise<DistributionSummary> {
     if (!this.isConnected || !this.api || !this.account) {
       throw new Error('Distributor not initialized. Call initialize() first.');
+    }
+
+    // Initialize CSV logger if source filename provided
+    let csvLogger: CSVTransactionLogger | undefined;
+    if (sourceFilename) {
+      csvLogger = new CSVTransactionLogger(sourceFilename);
+      await csvLogger.initialize();
+      this.logger.info('CSV transaction log initialized', { logPath: csvLogger.getLogFilePath() });
     }
 
     const summary: DistributionSummary = {
@@ -105,7 +115,7 @@ export class TokenDistributor {
     this.logger.logDistributionStart(summary.totalRecords, summary.totalAmount);
 
     // Save initial state for resume capability
-    await this.resumeManager.saveState(records, summary, resumeFromIndex);
+    await this.resumeManager.saveState(records, summary, resumeFromIndex, sourceFilename);
 
     try {
       for (let i = resumeFromIndex; i < records.length; i++) {
@@ -152,6 +162,11 @@ export class TokenDistributor {
 
             // Log transaction success with hash
             console.log(`✅ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${result.transactionHash}`);
+            
+            // Log to CSV if logger is available
+            if (csvLogger) {
+              await csvLogger.logTransaction(record);
+            }
           } else {
             throw new Error(result.error || 'Transaction failed');
           }
@@ -172,6 +187,11 @@ export class TokenDistributor {
 
           // Log transaction failure
           console.log(`❌ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${record.error}`);
+          
+          // Log to CSV if logger is available
+          if (csvLogger) {
+            await csvLogger.logTransaction(record);
+          }
 
           // Ask user what to do with failed transaction
           const action = await this.handleTransactionFailure(record, i, error, record.attempts || 1);

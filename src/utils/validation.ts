@@ -393,6 +393,7 @@ export class CSVValidator {
     this.logger.info('Parsing validated CSV file', { filePath });
 
     const records: DistributionRecord[] = [];
+    let currentRowNumber = 0;
 
     return new Promise((resolve, reject) => {
       const stream = fs.createReadStream(filePath).pipe(
@@ -402,6 +403,7 @@ export class CSVValidator {
       );
 
       stream.on('data', (row: any) => {
+        currentRowNumber++;
         const address = row.address?.trim();
         const amount = row.amount?.trim();
 
@@ -410,6 +412,7 @@ export class CSVValidator {
             address,
             amount: normalizeAmount(amount),
             status: 'pending',
+            sourceRowNumber: currentRowNumber,
           });
         }
       });
