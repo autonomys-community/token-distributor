@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { loadConfig, validateConfig } from './config';
-import { CSVValidator } from './utils/validation';
+import { CSVValidator, ai3ToShannon } from './utils/validation';
 import { TokenDistributor } from './core/distributor';
 import { ResumeManager } from './core/resume-manager';
 import { UserPrompts } from './cli/prompts';
@@ -113,7 +113,8 @@ class TokenDistributorApp {
       const balanceValidation = await this.distributor.validateSufficientBalance(validation.totalAmount);
 
       if (!balanceValidation.sufficient) {
-        const gasBuffer = (1 * Math.pow(10, 18)).toString(); // 1 token for gas
+        // TODO: Make gas buffer configurable and a number
+        const gasBuffer = ai3ToShannon('1'); // 1 AI3 token in Shannon for gas
         const action = await this.prompts.askForInsufficientBalance(
           balanceValidation.requiredAmount,
           balanceValidation.currentBalance,
@@ -194,7 +195,7 @@ class TokenDistributorApp {
       
       this.logger.info('Dry run transaction', {
         address: record.address,
-        amount: record.amount,
+        amount: record.amount.toString(),
         index: i
       });
     }
@@ -206,7 +207,7 @@ class TokenDistributorApp {
     }
 
       const proceedWithReal = await this.prompts.confirmDistribution(
-        { recordCount: records.length, totalAmount: '0', isValid: true, errors: [], warnings: [], duplicates: [] },
+        { recordCount: records.length, totalAmount: 0n, isValid: true, errors: [], warnings: [], duplicates: [] },
         this.distributor.distributorAddress!,
         this.distributor.networkName
       );

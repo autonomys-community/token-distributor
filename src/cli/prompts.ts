@@ -2,6 +2,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import { DistributionRecord, ValidationResult, ResumeData } from '../types';
 import { ResumeManager } from '../core/resume-manager';
+import { formatAi3Amount } from '../utils/validation';
 import Logger from '../utils/logger';
 
 export class UserPrompts {
@@ -15,7 +16,7 @@ export class UserPrompts {
     validation: ValidationResult,
     distributorAddress: string,
     network: string,
-    balanceValidation?: { sufficient: boolean; currentBalance: string; requiredAmount: string }
+    balanceValidation?: { sufficient: boolean; currentBalance: bigint; requiredAmount: bigint }
   ): Promise<boolean> {
     console.log(chalk.blue('\n=== Distribution Summary ==='));
     console.log(chalk.white(`Network: ${chalk.cyan(network)}`));
@@ -23,7 +24,7 @@ export class UserPrompts {
     console.log(chalk.white(`Total Records: ${chalk.yellow(validation.recordCount)}`));
     console.log(
       chalk.white(
-        `Distribution Amount: ${chalk.yellow(this.formatTokenAmount(validation.totalAmount))} tokens`
+        `Distribution Amount: ${chalk.yellow(formatAi3Amount(validation.totalAmount))} tokens`
       )
     );
 
@@ -38,12 +39,12 @@ export class UserPrompts {
     if (balanceValidation) {
       console.log(
         chalk.white(
-          `Account Balance: ${chalk.cyan(this.formatTokenAmount(balanceValidation.currentBalance))} tokens`
+          `Account Balance: ${chalk.cyan(formatAi3Amount(balanceValidation.currentBalance))} tokens`
         )
       );
       console.log(
         chalk.white(
-          `Required (incl. gas): ${chalk.yellow(this.formatTokenAmount(balanceValidation.requiredAmount))} tokens`
+          `Required (incl. gas): ${chalk.yellow(formatAi3Amount(balanceValidation.requiredAmount))} tokens`
         )
       );
 
@@ -136,7 +137,7 @@ export class UserPrompts {
   ): Promise<'retry' | 'skip' | 'pause' | 'abort'> {
     console.log(chalk.red('\n❌ Transaction Failed'));
     console.log(chalk.white(`Address: ${chalk.cyan(record.address)}`));
-    console.log(chalk.white(`Amount: ${chalk.yellow(record.amount)}`));
+    console.log(chalk.white(`Amount: ${chalk.yellow(formatAi3Amount(record.amount))} AI3`));
     console.log(chalk.white(`Record: ${chalk.yellow(index + 1)}`));
     console.log(chalk.white(`Attempt: ${chalk.yellow(attempt)}`));
     console.log(chalk.red(`Error: ${error.message || error}`));
@@ -166,26 +167,26 @@ export class UserPrompts {
   }
 
   async askForInsufficientBalance(
-    required: string,
-    available: string,
-    shortfall: string,
-    distributionAmount: string,
-    gasBuffer: string
+    required: bigint,
+    available: bigint,
+    shortfall: bigint,
+    distributionAmount: bigint,
+    gasBuffer: bigint
   ): Promise<'abort' | 'continue'> {
     console.log(chalk.red('\n💰 Insufficient Balance'));
     console.log(
       chalk.white(
-        `Distribution Amount: ${chalk.cyan(this.formatTokenAmount(distributionAmount))} tokens`
+        `Distribution Amount: ${chalk.cyan(formatAi3Amount(distributionAmount))} tokens`
       )
     );
-    console.log(chalk.white(`Gas Buffer: ${chalk.cyan(this.formatTokenAmount(gasBuffer))} tokens`));
+    console.log(chalk.white(`Gas Buffer: ${chalk.cyan(formatAi3Amount(gasBuffer))} tokens`));
     console.log(
-      chalk.white(`Total Required: ${chalk.yellow(this.formatTokenAmount(required))} tokens`)
+      chalk.white(`Total Required: ${chalk.yellow(formatAi3Amount(required))} tokens`)
     );
     console.log(
-      chalk.white(`Available: ${chalk.yellow(this.formatTokenAmount(available))} tokens`)
+      chalk.white(`Available: ${chalk.yellow(formatAi3Amount(available))} tokens`)
     );
-    console.log(chalk.red(`Shortfall: ${chalk.red(this.formatTokenAmount(shortfall))} tokens`));
+    console.log(chalk.red(`Shortfall: ${chalk.red(formatAi3Amount(shortfall))} tokens`));
 
     const { action } = await inquirer.prompt([
       {
@@ -200,12 +201,6 @@ export class UserPrompts {
     ]);
 
     return action;
-  }
-
-  private formatTokenAmount(weiAmount: string): string {
-    // Convert wei to tokens (assuming 18 decimals)
-    const tokens = Number(weiAmount) / Math.pow(10, 18);
-    return tokens.toLocaleString(undefined, { maximumFractionDigits: 6 });
   }
 
   async askToResumeDistribution(resumeManager: ResumeManager): Promise<{

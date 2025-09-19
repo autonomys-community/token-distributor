@@ -3,6 +3,9 @@ import {
   isValidAutonomysAddress,
   isValidAmount,
   normalizeAmount,
+  ai3ToShannon,
+  shannonToAi3,
+  formatAi3Amount,
   getAddressNetworkInfo,
   CSVValidator,
 } from '../../src/utils/validation';
@@ -197,17 +200,132 @@ describe('Amount Validation', () => {
     });
   });
 
-  describe('normalizeAmount', () => {
-    test('should convert amounts to wei correctly', () => {
-      expect(normalizeAmount('1')).toBe('1000000000000000000');
-      expect(normalizeAmount('0.1')).toBe('100000000000000000');
-      expect(normalizeAmount('100.5')).toBe('100500000000000000000');
+  describe('normalizeAmount (AI3 to Shannon)', () => {
+    test('should convert amounts to Shannon correctly', () => {
+      expect(normalizeAmount('1')).toBe(1000000000000000000n);
+      expect(normalizeAmount('0.1')).toBe(100000000000000000n);
+      expect(normalizeAmount('100.5')).toBe(100500000000000000000n);
     });
 
-    test('should handle decimal amounts', () => {
-      // Note: JavaScript floating point precision may cause slight variations in very precise decimals
+    test('should handle maximum precision (18 decimals)', () => {
       const result = normalizeAmount('1.123456789012345678');
-      expect(result).toMatch(/^112345678901234570[0-9]$/); // Allow for floating point precision
+      expect(result).toBe(1123456789012345678n); // Exact precision with BigInt
+    });
+
+    test('should handle very small amounts', () => {
+      expect(normalizeAmount('0.000000000000000001')).toBe(1n); // 1 Shannon
+      expect(normalizeAmount('0.000000000000001')).toBe(1000n); // 1000 Shannon
+    });
+  });
+
+  describe('Shannon Precision Functions', () => {
+    describe('ai3ToShannon', () => {
+      test('should convert whole AI3 amounts correctly', () => {
+        expect(ai3ToShannon('1')).toBe(1000000000000000000n);
+        expect(ai3ToShannon('100')).toBe(100000000000000000000n);
+        expect(ai3ToShannon('0')).toBe(0n);
+      });
+
+      test('should convert decimal AI3 amounts correctly', () => {
+        expect(ai3ToShannon('0.5')).toBe(500000000000000000n);
+        expect(ai3ToShannon('1.5')).toBe(1500000000000000000n);
+        expect(ai3ToShannon('0.000000000000000001')).toBe(1n); // 1 Shannon
+      });
+
+      test('should handle maximum precision (18 decimals)', () => {
+        expect(ai3ToShannon('1.123456789012345678')).toBe(1123456789012345678n);
+        expect(ai3ToShannon('0.123456789012345678')).toBe(123456789012345678n);
+      });
+
+      test('should truncate beyond 18 decimals', () => {
+        expect(ai3ToShannon('1.1234567890123456789')).toBe(1123456789012345678n); // 19th decimal truncated
+      });
+
+      test('should handle whitespace', () => {
+        expect(ai3ToShannon('  1.5  ')).toBe(1500000000000000000n);
+      });
+
+      test('should throw on invalid format', () => {
+        expect(() => ai3ToShannon('abc')).toThrow('Invalid AI3 amount format');
+        expect(() => ai3ToShannon('1.2.3')).toThrow('Invalid AI3 amount format');
+        expect(() => ai3ToShannon('1a.5')).toThrow('Invalid AI3 amount format');
+      });
+    });
+
+    describe('shannonToAi3', () => {
+      test('should convert whole Shannon amounts correctly', () => {
+        expect(shannonToAi3(1000000000000000000n)).toBe('1');
+        expect(shannonToAi3(100000000000000000000n)).toBe('100');
+        expect(shannonToAi3(0n)).toBe('0');
+      });
+
+      test('should convert fractional Shannon amounts correctly', () => {
+        expect(shannonToAi3(500000000000000000n)).toBe('0.5');
+        expect(shannonToAi3(1500000000000000000n)).toBe('1.5');
+        expect(shannonToAi3(1n)).toBe('0.000000000000000001'); // 1 Shannon
+      });
+
+      test('should handle maximum precision', () => {
+        expect(shannonToAi3(1123456789012345678n)).toBe('1.123456789012345678');
+        expect(shannonToAi3(123456789012345678n)).toBe('0.123456789012345678');
+      });
+
+      test('should remove trailing zeros', () => {
+        expect(shannonToAi3(1500000000000000000n)).toBe('1.5'); // Not '1.500000000000000000'
+        expect(shannonToAi3(1000000000000000000n)).toBe('1'); // Not '1.000000000000000000'
+      });
+    });
+
+    describe('formatAi3Amount', () => {
+      test('should format Shannon amounts as AI3', () => {
+        expect(formatAi3Amount(1000000000000000000n)).toBe('1');
+        expect(formatAi3Amount(1500000000000000000n)).toBe('1.5');
+        expect(formatAi3Amount(123456789012345678n)).toBe('0.123456789012345678');
+      });
+
+      test('should maintain precision for very small amounts', () => {
+        expect(formatAi3Amount(1n)).toBe('0.000000000000000001');
+        expect(formatAi3Amount(999n)).toBe('0.000000000000000999');
+      });
+    });
+
+    describe('Round-trip consistency', () => {
+      test('should maintain precision in round-trip conversions', () => {
+        const testValues = [
+          '1',
+          '0.5',
+          '100.25',
+          '0.000000000000000001', // 1 Shannon
+          '1.123456789012345678', // Max precision
+          '999999.999999999999999999', // Large with max precision
+        ];
+
+        testValues.forEach(ai3Value => {
+          const shannon = ai3ToShannon(ai3Value);
+          const backToAi3 = shannonToAi3(shannon);
+          // Handle truncation for values beyond 18 decimals
+          const expectedAi3 = ai3Value.includes('.') && ai3Value.split('.')[1].length > 18
+            ? ai3Value.split('.')[0] + '.' + ai3Value.split('.')[1].slice(0, 18)
+            : ai3Value;
+          expect(backToAi3).toBe(expectedAi3);
+        });
+      });
+    });
+
+    describe('Edge cases and limits', () => {
+      test('should handle very large amounts', () => {
+        const largeAmount = '999999999999999999999'; // Large AI3 amount
+        expect(() => ai3ToShannon(largeAmount)).not.toThrow();
+        const shannon = ai3ToShannon(largeAmount);
+        expect(shannonToAi3(shannon)).toBe(largeAmount);
+      });
+
+      test('should handle zero correctly', () => {
+        expect(ai3ToShannon('0')).toBe(0n);
+        expect(ai3ToShannon('0.0')).toBe(0n);
+        expect(ai3ToShannon('0.000000000000000000')).toBe(0n);
+        expect(shannonToAi3(0n)).toBe('0');
+      });
     });
   });
 });
@@ -319,18 +437,16 @@ describe('CSV Validation', () => {
     );
   });
 
-  // TODO: standardise on 18 decimal places of precision everywhere
-  test('should warn about very small amounts', async () => {
-    const csvContent = `${testAddresses.validAutonomys},0.0000001`;
+  test('should warn about very small amounts in Shannon units', async () => {
+    const csvContent = `${testAddresses.validAutonomys},0.0000000000000005`; // 500 Shannon
     const csvFile = path.join(tempDir, 'small_amount.csv');
     await fs.writeFile(csvFile, csvContent);
 
     const result = await validator.validateCSV(csvFile);
 
     expect(result.isValid).toBe(true);
-    expect(result.warnings).toContain(
-      'Line 1: Very small amount (0.0000001) may cause precision issues'
-    );
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings.some(w => w.includes('Shannon') && w.includes('verify precision'))).toBe(true);
   });
 
   test('should parse validated CSV correctly', async () => {

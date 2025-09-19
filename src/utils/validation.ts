@@ -105,15 +105,97 @@ function isValidAmount(amount: string): boolean {
     return false;
   }
 
-  const num = parseFloat(amount);
-  return num > 0 && !isNaN(num) && isFinite(num);
+  // Validate that it represents a positive number
+  // Check for zero (all zeros with optional decimal point and trailing zeros)
+  if (/^0+(\.0+)?$/.test(amount)) {
+    return false; // Zero is not valid
+  }
+  
+  // For valid non-zero numbers, the regex already ensures it's a valid decimal format
+  return true;
 }
 
-function normalizeAmount(amount: string): string {
-  // Convert to wei-like units (18 decimals for Autonomys)
-  const num = parseFloat(amount.trim());
-  const weiAmount = num * Math.pow(10, 18);
-  return weiAmount.toString();
+/**
+ * Shannon utility functions for Autonomys AI3 token precision
+ * 1 AI3 = 10^18 Shannon (similar to how 1 ETH = 10^18 wei)
+ */
+
+// Constants for Shannon precision
+const SHANNON_DECIMALS = 18;
+const SHANNON_MULTIPLIER = BigInt(10) ** BigInt(SHANNON_DECIMALS);
+
+/**
+ * Convert AI3 amount (decimal string) to Shannon (smallest unit)
+ * @param ai3Amount - Amount in AI3 (e.g., "1.5" or "0.000000000000000001")
+ * @returns Shannon amount as bigint
+ */
+function ai3ToShannon(ai3Amount: string): bigint {
+  const trimmed = ai3Amount.trim();
+  
+  // Validate format - must be a valid decimal number (no scientific notation)
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+    throw new Error(`Invalid AI3 amount format: ${ai3Amount}`);
+  }
+  
+  // Handle decimal places by splitting on decimal point
+  const [wholePart = '0', decimalPart = ''] = trimmed.split('.');
+  
+  // Pad or truncate decimal part to exactly 18 digits
+  const paddedDecimal = decimalPart.padEnd(SHANNON_DECIMALS, '0').slice(0, SHANNON_DECIMALS);
+  
+  // Convert to BigInt Shannon
+  const wholeShannon = BigInt(wholePart) * SHANNON_MULTIPLIER;
+  const decimalShannon = BigInt(paddedDecimal);
+  
+  return wholeShannon + decimalShannon;
+}
+
+/**
+ * Convert Shannon amount to AI3 (decimal format)
+ * @param shannonAmount - Amount in Shannon (smallest units)
+ * @returns AI3 amount as decimal string
+ */
+function shannonToAi3(shannonAmount: bigint): string {
+  const shannon = shannonAmount;
+  const wholePart = shannon / SHANNON_MULTIPLIER;
+  const decimalPart = shannon % SHANNON_MULTIPLIER;
+  
+  if (decimalPart === 0n) {
+    return wholePart.toString();
+  }
+  
+  // Format decimal part with trailing zeros removed
+  const decimalStr = decimalPart.toString().padStart(SHANNON_DECIMALS, '0');
+  const trimmedDecimal = decimalStr.replace(/0+$/, '');
+  
+  return `${wholePart.toString()}.${trimmedDecimal}`;
+}
+
+/**
+ * Normalize amount from AI3 to Shannon for internal processing
+ * @param amount - AI3 amount as string
+ * @returns Shannon amount as bigint
+ */
+function normalizeAmount(amount: string): bigint {
+  return ai3ToShannon(amount);
+}
+
+/**
+ * Format Shannon amount back to human-readable AI3
+ * @param shannonAmount - Shannon amount as bigint
+ * @returns Formatted AI3 amount
+ */
+function formatAi3Amount(shannonAmount: bigint): string {
+  return shannonToAi3(shannonAmount);
+}
+
+/**
+ * Convert Shannon bigint to string for Auto SDK transfer function
+ * @param shannonAmount - Shannon amount as bigint
+ * @returns Shannon amount as string for Auto SDK
+ */
+function shannonToString(shannonAmount: bigint): string {
+  return shannonAmount.toString();
 }
 
 export class CSVValidator {
@@ -134,7 +216,7 @@ export class CSVValidator {
     const warnings: string[] = [];
     const records: DistributionRecord[] = [];
     const addressMap = new Map<string, number[]>();
-    let totalAmount = 0;
+    let totalAmountShannon = BigInt(0);
     let currentLineNumber = 0;
     let autonomysCount = 0;
     let substrateCount = 0;
@@ -186,17 +268,19 @@ export class CSVValidator {
             return;
           }
 
-          const amountNumber = parseFloat(amount);
+          // Convert to Shannon for precise arithmetic
+          const shannonAmount = normalizeAmount(amount);
 
-          // Check for very small amounts that might cause issues
-          if (amountNumber < 0.000001) {
+          // Check for very small amounts (less than 1000 Shannon)
+          if (shannonAmount < 1000n) {
             warnings.push(
-              `Line ${currentLineNumber}: Very small amount (${amount}) may cause precision issues`
+              `Line ${currentLineNumber}: Very small amount (${amount} AI3 = ${shannonAmount} Shannon) - verify precision`
             );
           }
 
-          // Check for very large amounts
-          if (amountNumber > 1000000) {
+          // Check for very large amounts (> 1M AI3 in Shannon)
+          const millionAI3InShannon = normalizeAmount('1000000');
+          if (shannonAmount > millionAI3InShannon) {
             warnings.push(
               `Line ${currentLineNumber}: Large amount (${amount}) - please verify this is correct`
             );
@@ -212,11 +296,11 @@ export class CSVValidator {
           // Add to records
           records.push({
             address,
-            amount: normalizeAmount(amount),
+            amount: shannonAmount,
             status: 'pending',
           });
 
-          totalAmount += amountNumber;
+          totalAmountShannon += shannonAmount;
         } catch (error) {
           errors.push(`Line ${currentLineNumber}: Parsing error - ${error}`);
         }
@@ -237,7 +321,7 @@ export class CSVValidator {
           errors.push('No valid records found in CSV file');
         }
 
-        if (totalAmount === 0) {
+        if (totalAmountShannon === 0n) {
           errors.push('Total distribution amount is zero');
         }
 
@@ -246,7 +330,7 @@ export class CSVValidator {
           errors,
           warnings,
           duplicates,
-          totalAmount: normalizeAmount(totalAmount.toString()),
+          totalAmount: totalAmountShannon,
           recordCount: records.length,
           addressStats: {
             autonomysCount,
@@ -259,7 +343,7 @@ export class CSVValidator {
         if (result.isValid) {
           this.logger.info('CSV validation passed', {
             recordCount: result.recordCount,
-            totalAmount: totalAmount.toString(),
+            totalAmount: totalAmountShannon,
             warningCount: warnings.length,
           });
         } else {
@@ -350,4 +434,15 @@ export const distributionConfigSchema = Joi.object({
   confirmationBlocks: Joi.number().integer().min(1).max(100).default(2),
 });
 
-export { validateAddress, isValidAutonomysAddress, isValidAmount, normalizeAmount, getAddressNetworkInfo, AddressValidationResult };
+export { 
+  validateAddress, 
+  isValidAutonomysAddress, 
+  isValidAmount, 
+  normalizeAmount, 
+  ai3ToShannon,
+  shannonToAi3,
+  formatAi3Amount,
+  shannonToString,
+  getAddressNetworkInfo, 
+  AddressValidationResult 
+};

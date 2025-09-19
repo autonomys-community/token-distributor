@@ -8,6 +8,7 @@ import { DistributionRecord, DistributionSummary, TransactionResult, AppConfig, 
 import { getNetworkConfig } from '../config/networks';
 import Logger from '../utils/logger';
 import { ResumeManager } from './resume-manager';
+import { ai3ToShannon, shannonToString } from '../utils/validation';
 
 export class TokenDistributor {
   private api?: ApiPromise;
@@ -92,11 +93,11 @@ export class TokenDistributor {
       failed: 0,
       skipped: 0,
       totalAmount: records.reduce(
-        (sum, record) => (BigInt(sum) + BigInt(record.amount)).toString(),
-        '0'
+        (sum, record) => sum + record.amount,
+        0n
       ),
-      distributedAmount: '0',
-      failedAmount: '0',
+      distributedAmount: 0n,
+      failedAmount: 0n,
       startTime: new Date(),
       resumedFrom: resumeFromIndex > 0 ? resumeFromIndex : undefined,
     };
@@ -132,9 +133,7 @@ export class TokenDistributor {
             record.blockNumber = result.blockNumber;
 
             summary.completed++;
-            summary.distributedAmount = (
-              BigInt(summary.distributedAmount) + BigInt(record.amount)
-            ).toString();
+            summary.distributedAmount += record.amount;
 
             this.logger.logTransactionSuccess(
               record.address,
@@ -152,7 +151,7 @@ export class TokenDistributor {
           record.attempts = (record.attempts || 0) + 1;
 
           summary.failed++;
-          summary.failedAmount = (BigInt(summary.failedAmount) + BigInt(record.amount)).toString();
+          summary.failedAmount += record.amount;
 
           this.logger.logTransactionFailure(
             record.address,
@@ -206,8 +205,8 @@ export class TokenDistributor {
     }
 
     try {
-      // Create transfer transaction
-      const tx = await transfer(this.api, record.address, record.amount);
+      // Create transfer transaction - Auto SDK expects string amount
+      const tx = await transfer(this.api, record.address, record.amount.toString());
 
       // Sign and send transaction
       const result = await signAndSendTx(this.account, tx);
@@ -318,19 +317,21 @@ export class TokenDistributor {
     return balanceInfo.free.toString();
   }
 
-  async validateSufficientBalance(totalAmount: string): Promise<{
+  async validateSufficientBalance(totalAmount: bigint): Promise<{
     sufficient: boolean;
-    currentBalance: string;
-    requiredAmount: string;
-    shortfall?: string;
+    currentBalance: bigint;
+    requiredAmount: bigint;
+    shortfall?: bigint;
   }> {
-    const currentBalance = await this.checkDistributorBalance();
+    const currentBalanceString = await this.checkDistributorBalance();
+    const currentBalance = BigInt(currentBalanceString);
 
-    // Add 1 token (in wei) for gas fees
-    const gasBuffer = (1 * Math.pow(10, 18)).toString();
-    const requiredAmount = (BigInt(totalAmount) + BigInt(gasBuffer)).toString();
+    // TODO: Make gas buffer configurable and a number
+    // Add 1 AI3 token in Shannon for gas fees
+    const gasBuffer = ai3ToShannon('1');
+    const requiredAmount = totalAmount + gasBuffer;
 
-    const sufficient = BigInt(currentBalance) >= BigInt(requiredAmount);
+    const sufficient = currentBalance >= requiredAmount;
 
     const result = {
       sufficient,
@@ -338,16 +339,16 @@ export class TokenDistributor {
       requiredAmount,
       ...(sufficient
         ? {}
-        : { shortfall: (BigInt(requiredAmount) - BigInt(currentBalance)).toString() }),
+        : { shortfall: requiredAmount - currentBalance }),
     };
 
     this.logger.info('Balance validation completed', {
-      currentBalance,
-      totalDistributionAmount: totalAmount,
-      gasBuffer,
-      requiredAmount,
+      currentBalance: currentBalance.toString(),
+      totalDistributionAmount: totalAmount.toString(),
+      gasBuffer: gasBuffer.toString(),
+      requiredAmount: requiredAmount.toString(),
       sufficient,
-      ...(result.shortfall && { shortfall: result.shortfall }),
+      ...(result.shortfall && { shortfall: result.shortfall.toString() }),
     });
 
     return result;

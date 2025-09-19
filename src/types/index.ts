@@ -1,6 +1,6 @@
 export interface DistributionRecord {
   address: string;
-  amount: string;
+  amount: bigint; // Shannon amount as bigint for internal processing
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
   transactionHash?: string;
   blockHash?: string;
@@ -15,9 +15,9 @@ export interface DistributionSummary {
   completed: number;
   failed: number;
   skipped: number;
-  totalAmount: string;
-  distributedAmount: string;
-  failedAmount: string;
+  totalAmount: bigint; // Shannon amount as bigint
+  distributedAmount: bigint; // Shannon amount as bigint
+  failedAmount: bigint; // Shannon amount as bigint
   startTime: Date;
   endTime?: Date;
   resumedFrom?: number;
@@ -44,7 +44,7 @@ export interface ValidationResult {
   errors: string[];
   warnings: string[];
   duplicates: { address: string; indices: number[] }[];
-  totalAmount: string;
+  totalAmount: bigint; // Shannon amount as bigint
   recordCount: number;
   addressStats?: {
     autonomysCount: number;

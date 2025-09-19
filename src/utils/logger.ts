@@ -116,11 +116,11 @@ class Logger {
   }
 
   // Specialized logging methods for distribution events
-  logTransactionStart(address: string, amount: string, index: number): void {
+  logTransactionStart(address: string, amount: bigint, index: number): void {
     this.info('Starting transaction', {
       transaction: {
         address,
-        amount,
+        amount: amount.toString(),
         index,
         status: 'starting',
         timestamp: new Date().toISOString(),
@@ -130,7 +130,7 @@ class Logger {
 
   logTransactionSuccess(
     address: string,
-    amount: string,
+    amount: bigint,
     transactionHash: string,
     blockNumber?: number,
     blockHash?: string
@@ -138,7 +138,7 @@ class Logger {
     this.info('Transaction successful', {
       transaction: {
         address,
-        amount,
+        amount: amount.toString(),
         transactionHash,
         blockNumber,
         blockHash,
@@ -148,11 +148,11 @@ class Logger {
     });
   }
 
-  logTransactionFailure(address: string, amount: string, error: string, attempt: number): void {
+  logTransactionFailure(address: string, amount: bigint, error: string, attempt: number): void {
     this.error('Transaction failed', {
       transaction: {
         address,
-        amount,
+        amount: amount.toString(),
         error,
         attempt,
         status: 'failed',
@@ -161,11 +161,11 @@ class Logger {
     });
   }
 
-  logDistributionStart(totalRecords: number, totalAmount: string): void {
+  logDistributionStart(totalRecords: number, totalAmount: bigint): void {
     this.info('Distribution started', {
       distribution: {
         totalRecords,
-        totalAmount,
+        totalAmount: totalAmount.toString(),
         status: 'started',
         timestamp: new Date().toISOString(),
       },
