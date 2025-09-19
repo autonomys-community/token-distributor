@@ -6,7 +6,8 @@ const originalEnv = process.env;
 describe('Configuration', () => {
   beforeEach(() => {
     jest.resetModules();
-    process.env = { ...originalEnv };
+    // Clear environment variables and set only what's needed for tests
+    process.env = {};
   });
 
   afterAll(() => {
@@ -28,6 +29,7 @@ describe('Configuration', () => {
       expect(config.logToFile).toBe(true);
       expect(config.confirmationBlocks).toBe(2);
       expect(config.batchSize).toBe(10);
+      expect(config.gasBufferAi3).toBe(1);
     });
 
     test('should load config with custom values', () => {
