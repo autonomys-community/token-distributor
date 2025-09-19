@@ -149,6 +149,9 @@ export class TokenDistributor {
               result.blockNumber,
               result.blockHash
             );
+
+            // Log transaction success with hash
+            console.log(`✅ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${result.transactionHash}`);
           } else {
             throw new Error(result.error || 'Transaction failed');
           }
@@ -166,6 +169,9 @@ export class TokenDistributor {
             record.error,
             record.attempts
           );
+
+          // Log transaction failure
+          console.log(`❌ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${record.error}`);
 
           // Ask user what to do with failed transaction
           const action = await this.handleTransactionFailure(record, i, error, record.attempts || 1);
@@ -224,7 +230,7 @@ export class TokenDistributor {
       // Create transfer transaction - Auto SDK expects string amount
       const tx = await transfer(this.api, record.address, record.amount.toString());
 
-      // Sign and send transaction
+      // Sign and send transaction using Auto SDK
       const result = await signAndSendTx(this.account, tx);
 
       // Wait for confirmation
@@ -232,7 +238,7 @@ export class TokenDistributor {
 
       return {
         success: true,
-        transactionHash: result.identifier || 'unknown',
+        transactionHash: result.txHash,
         blockHash: result.receipt.status.isInBlock
           ? result.receipt.status.asInBlock.toString()
           : undefined,
