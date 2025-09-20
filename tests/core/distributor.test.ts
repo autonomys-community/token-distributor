@@ -42,8 +42,12 @@ jest.mock('../../src/core/resume-manager', () => ({
     clearState: jest.fn().mockResolvedValue(undefined),
     clearOldStates: jest.fn().mockResolvedValue(undefined),
     getResumeDir: jest.fn().mockReturnValue('/mock/resume/dir'),
-    getResumeStats: jest.fn().mockResolvedValue({ totalFiles: 0, oldestFile: null, newestFile: null }),
-    analyzeProgress: jest.fn().mockResolvedValue({ progressPercentage: 0, estimatedTimeRemaining: 0 }),
+    getResumeStats: jest
+      .fn()
+      .mockResolvedValue({ totalFiles: 0, oldestFile: null, newestFile: null }),
+    analyzeProgress: jest
+      .fn()
+      .mockResolvedValue({ progressPercentage: 0, estimatedTimeRemaining: 0 }),
     exportResumeData: jest.fn().mockResolvedValue(undefined),
   })),
 }));
@@ -89,12 +93,14 @@ describe('TokenDistributor', () => {
   describe('validateSufficientBalance', () => {
     beforeEach(() => {
       // Mock the checkDistributorBalance method
-      jest.spyOn(distributor, 'checkDistributorBalance').mockImplementation(async () => '1000000000000000000000'); // 1000 AI3 in Shannon
+      jest
+        .spyOn(distributor, 'checkDistributorBalance')
+        .mockImplementation(async () => '1000000000000000000000'); // 1000 AI3 in Shannon
     });
 
     test('should include gas buffer in balance calculation - sufficient balance', async () => {
       const distributionAmount = ai3NumberToShannon(100); // 100 AI3
-      
+
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
@@ -103,18 +109,21 @@ describe('TokenDistributor', () => {
       expect(result.shortfall).toBeUndefined();
 
       // Verify logger was called with correct information
-      expect(mockLogger.info).toHaveBeenCalledWith('Balance validation completed', expect.objectContaining({
-        currentBalance: '1000000000000000000000',
-        totalDistributionAmount: distributionAmount.toString(),
-        gasBuffer: ai3NumberToShannon(1).toString(),
-        requiredAmount: (distributionAmount + ai3NumberToShannon(1)).toString(),
-        sufficient: true,
-      }));
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Balance validation completed',
+        expect.objectContaining({
+          currentBalance: '1000000000000000000000',
+          totalDistributionAmount: distributionAmount.toString(),
+          gasBuffer: ai3NumberToShannon(1).toString(),
+          requiredAmount: (distributionAmount + ai3NumberToShannon(1)).toString(),
+          sufficient: true,
+        })
+      );
     });
 
     test('should include gas buffer in balance calculation - insufficient balance', async () => {
       const distributionAmount = ai3NumberToShannon(999.5); // 999.5 AI3
-      
+
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(false);
@@ -123,38 +132,46 @@ describe('TokenDistributor', () => {
       expect(result.shortfall).toBe(ai3NumberToShannon(0.5)); // Need 0.5 AI3 more
 
       // Verify logger was called with shortfall information
-      expect(mockLogger.info).toHaveBeenCalledWith('Balance validation completed', expect.objectContaining({
-        currentBalance: '1000000000000000000000',
-        totalDistributionAmount: distributionAmount.toString(),
-        gasBuffer: ai3NumberToShannon(1).toString(),
-        requiredAmount: (distributionAmount + ai3NumberToShannon(1)).toString(),
-        sufficient: false,
-        shortfall: ai3NumberToShannon(0.5).toString(),
-      }));
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Balance validation completed',
+        expect.objectContaining({
+          currentBalance: '1000000000000000000000',
+          totalDistributionAmount: distributionAmount.toString(),
+          gasBuffer: ai3NumberToShannon(1).toString(),
+          requiredAmount: (distributionAmount + ai3NumberToShannon(1)).toString(),
+          sufficient: false,
+          shortfall: ai3NumberToShannon(0.5).toString(),
+        })
+      );
     });
 
     test('should use custom gas buffer from config', async () => {
       // Create distributor with custom gas buffer
       const customConfig = { ...mockConfig, gasBufferAi3: 5 }; // 5 AI3 gas buffer
       const customDistributor = new TokenDistributor(customConfig, mockLogger);
-      jest.spyOn(customDistributor, 'checkDistributorBalance').mockImplementation(async () => '1000000000000000000000'); // 1000 AI3
+      jest
+        .spyOn(customDistributor, 'checkDistributorBalance')
+        .mockImplementation(async () => '1000000000000000000000'); // 1000 AI3
 
       const distributionAmount = ai3NumberToShannon(100); // 100 AI3
-      
+
       const result = await customDistributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
       expect(result.requiredAmount).toBe(distributionAmount + ai3NumberToShannon(5)); // 100 AI3 + 5 AI3 gas
 
       // Verify logger was called with correct gas buffer
-      expect(mockLogger.info).toHaveBeenCalledWith('Balance validation completed', expect.objectContaining({
-        gasBuffer: ai3NumberToShannon(5).toString(), // Should be 5 AI3, not 1 AI3
-      }));
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Balance validation completed',
+        expect.objectContaining({
+          gasBuffer: ai3NumberToShannon(5).toString(), // Should be 5 AI3, not 1 AI3
+        })
+      );
     });
 
     test('should handle edge case - exactly required amount', async () => {
       const distributionAmount = ai3NumberToShannon(999); // 999 AI3
-      
+
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
@@ -168,8 +185,10 @@ describe('TokenDistributor', () => {
       const requiredAmount = distributionAmount + ai3NumberToShannon(1); // 1000 AI3
       const availableBalance = requiredAmount - BigInt(1); // 1 Shannon short
 
-      jest.spyOn(distributor, 'checkDistributorBalance').mockImplementation(async () => availableBalance.toString());
-      
+      jest
+        .spyOn(distributor, 'checkDistributorBalance')
+        .mockImplementation(async () => availableBalance.toString());
+
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(false);
@@ -179,8 +198,10 @@ describe('TokenDistributor', () => {
     test('should handle very large distribution amounts', async () => {
       const distributionAmount = ai3NumberToShannon(1000000000); // 1 billion AI3
       // Mock a very large balance
-      jest.spyOn(distributor, 'checkDistributorBalance').mockImplementation(async () => ai3NumberToShannon(2000000000).toString()); // 2 billion AI3
-      
+      jest
+        .spyOn(distributor, 'checkDistributorBalance')
+        .mockImplementation(async () => ai3NumberToShannon(2000000000).toString()); // 2 billion AI3
+
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
@@ -189,7 +210,7 @@ describe('TokenDistributor', () => {
 
     test('should handle very small distribution amounts', async () => {
       const distributionAmount = BigInt(1); // 1 Shannon
-      
+
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
@@ -200,10 +221,12 @@ describe('TokenDistributor', () => {
       // Create distributor with zero gas buffer
       const zeroGasConfig = { ...mockConfig, gasBufferAi3: 0 };
       const zeroGasDistributor = new TokenDistributor(zeroGasConfig, mockLogger);
-      jest.spyOn(zeroGasDistributor, 'checkDistributorBalance').mockImplementation(async () => '1000000000000000000000'); // 1000 AI3
+      jest
+        .spyOn(zeroGasDistributor, 'checkDistributorBalance')
+        .mockImplementation(async () => '1000000000000000000000'); // 1000 AI3
 
       const distributionAmount = ai3NumberToShannon(1000); // 1000 AI3
-      
+
       const result = await zeroGasDistributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
@@ -214,10 +237,12 @@ describe('TokenDistributor', () => {
       // Create distributor with fractional gas buffer
       const fractionalGasConfig = { ...mockConfig, gasBufferAi3: 0.5 }; // 0.5 AI3 gas buffer
       const fractionalGasDistributor = new TokenDistributor(fractionalGasConfig, mockLogger);
-      jest.spyOn(fractionalGasDistributor, 'checkDistributorBalance').mockImplementation(async () => '1000000000000000000000'); // 1000 AI3
+      jest
+        .spyOn(fractionalGasDistributor, 'checkDistributorBalance')
+        .mockImplementation(async () => '1000000000000000000000'); // 1000 AI3
 
       const distributionAmount = ai3NumberToShannon(100); // 100 AI3
-      
+
       const result = await fractionalGasDistributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
@@ -229,56 +254,71 @@ describe('TokenDistributor', () => {
     test('should handle user abort gracefully without throwing exception', async () => {
       // Create a mock failure handler that returns 'abort'
       const abortFailureHandler = {
-        handleFailure: jest.fn().mockResolvedValue('abort')
+        handleFailure: jest.fn().mockResolvedValue('abort'),
       };
 
-      const distributorWithAbort = new TokenDistributor(mockConfig, mockLogger, abortFailureHandler);
-      
+      const distributorWithAbort = new TokenDistributor(
+        mockConfig,
+        mockLogger,
+        abortFailureHandler
+      );
+
       // Mock the distribute method dependencies and set internal state
       jest.spyOn(distributorWithAbort, 'initialize').mockResolvedValue();
-      jest.spyOn(distributorWithAbort, 'checkDistributorBalance').mockResolvedValue('1000000000000000000000');
-      
+      jest
+        .spyOn(distributorWithAbort, 'checkDistributorBalance')
+        .mockResolvedValue('1000000000000000000000');
+
       // Set internal connection state
       (distributorWithAbort as any).isConnected = true;
       (distributorWithAbort as any).api = {}; // Mock API
       (distributorWithAbort as any).account = {}; // Mock account
-      
-      // Mock executeTransfer to throw an error (to trigger failure handler)
-      jest.spyOn(distributorWithAbort as any, 'executeTransfer').mockRejectedValue(new Error('Mock transaction error'));
 
-      const records = [{
-        address: 'test-address',
-        amount: BigInt('1000000000000000000'),
-        status: 'pending' as const
-      }];
+      // Mock executeTransfer to throw an error (to trigger failure handler)
+      jest
+        .spyOn(distributorWithAbort as any, 'executeTransfer')
+        .mockRejectedValue(new Error('Mock transaction error'));
+
+      const records = [
+        {
+          address: 'test-address',
+          amount: BigInt('1000000000000000000'),
+          status: 'pending' as const,
+        },
+      ];
 
       // This should not throw an exception
       const result = await distributorWithAbort.distribute(records);
 
       expect(result.abortedByUser).toBe(true);
       expect(result.endTime).toBeDefined();
-      expect(mockLogger.info).toHaveBeenCalledWith('Distribution aborted by user', expect.any(Object));
-      
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Distribution aborted by user',
+        expect.any(Object)
+      );
+
       // Verify the abort failure handler was called
       expect(abortFailureHandler.handleFailure).toHaveBeenCalled();
     });
 
     test('should retry failed transactions when resuming', async () => {
       const mockFailureHandler = {
-        handleFailure: jest.fn().mockResolvedValue('pause')
+        handleFailure: jest.fn().mockResolvedValue('pause'),
       };
 
       const distributorWithPause = new TokenDistributor(mockConfig, mockLogger, mockFailureHandler);
-      
+
       // Mock the distribute method dependencies and set internal state
       jest.spyOn(distributorWithPause, 'initialize').mockResolvedValue();
-      jest.spyOn(distributorWithPause, 'checkDistributorBalance').mockResolvedValue('1000000000000000000000');
-      
+      jest
+        .spyOn(distributorWithPause, 'checkDistributorBalance')
+        .mockResolvedValue('1000000000000000000000');
+
       // Set internal connection state
       (distributorWithPause as any).isConnected = true;
       (distributorWithPause as any).api = {};
       (distributorWithPause as any).account = {};
-      
+
       // Mock executeTransfer to fail on first attempt, succeed on second
       let callCount = 0;
       jest.spyOn(distributorWithPause as any, 'executeTransfer').mockImplementation(async () => {
@@ -289,11 +329,13 @@ describe('TokenDistributor', () => {
         return { success: true, transactionHash: 'hash123', blockNumber: 100 };
       });
 
-      const records = [{
-        address: 'test-address',
-        amount: BigInt('1000000000000000000'),
-        status: 'pending' as const
-      }];
+      const records = [
+        {
+          address: 'test-address',
+          amount: BigInt('1000000000000000000'),
+          status: 'pending' as const,
+        },
+      ];
 
       // First distribution should pause after failure
       const firstResult = await distributorWithPause.distribute(records);
@@ -312,32 +354,38 @@ describe('TokenDistributor', () => {
 
     test('should handle pause correctly without setting endTime', async () => {
       const mockFailureHandler = {
-        handleFailure: jest.fn().mockResolvedValue('pause')
+        handleFailure: jest.fn().mockResolvedValue('pause'),
       };
 
       const distributorWithPause = new TokenDistributor(mockConfig, mockLogger, mockFailureHandler);
-      
+
       // Mock the distribute method dependencies and set internal state
       jest.spyOn(distributorWithPause, 'initialize').mockResolvedValue();
-      jest.spyOn(distributorWithPause, 'checkDistributorBalance').mockResolvedValue('1000000000000000000000');
-      
+      jest
+        .spyOn(distributorWithPause, 'checkDistributorBalance')
+        .mockResolvedValue('1000000000000000000000');
+
       // Set internal connection state
       (distributorWithPause as any).isConnected = true;
       (distributorWithPause as any).api = {};
       (distributorWithPause as any).account = {};
-      
-      // Mock executeTransfer to fail (trigger pause)
-      jest.spyOn(distributorWithPause as any, 'executeTransfer').mockRejectedValue(new Error('Transaction failed'));
 
-      const records = [{
-        address: 'test-address',
-        amount: BigInt('1000000000000000000'),
-        status: 'pending' as const
-      }];
+      // Mock executeTransfer to fail (trigger pause)
+      jest
+        .spyOn(distributorWithPause as any, 'executeTransfer')
+        .mockRejectedValue(new Error('Transaction failed'));
+
+      const records = [
+        {
+          address: 'test-address',
+          amount: BigInt('1000000000000000000'),
+          status: 'pending' as const,
+        },
+      ];
 
       // Distribution should pause after failure
       const result = await distributorWithPause.distribute(records);
-      
+
       // Verify pause behavior
       expect(result.failed).toBe(1);
       expect(result.endTime).toBeUndefined(); // endTime should NOT be set on pause

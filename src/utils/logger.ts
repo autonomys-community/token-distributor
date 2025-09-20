@@ -95,9 +95,9 @@ class Logger {
 
   error(message: string, error?: Error | any): void {
     if (error) {
-      this.winston.error(message, { 
-        error: error?.message || error, 
-        stack: error?.stack 
+      this.winston.error(message, {
+        error: error?.message || error,
+        stack: error?.stack,
       });
     } else {
       this.winston.error(message);

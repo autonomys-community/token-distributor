@@ -162,7 +162,6 @@ export class ResumeManager {
     return `resume-${timestamp}.json`;
   }
 
-
   getResumeDir(): string {
     return this.resumeDir;
   }

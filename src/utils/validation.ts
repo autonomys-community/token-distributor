@@ -45,22 +45,22 @@ function validateAddress(address: string): AddressValidationResult {
   try {
     // Use Autonomys SDK for primary validation - it handles both formats
     const isValidFormat = isAddress(address);
-    
+
     if (!isValidFormat) {
       return { isValid: false, error: 'Invalid SS58 address format' };
     }
 
     // Determine network type for informational purposes
     const networkInfo = getAddressNetworkInfo(address);
-    
-    return { 
-      isValid: true, 
-      networkType: networkInfo?.network.toLowerCase() as 'autonomys' | 'substrate'
+
+    return {
+      isValid: true,
+      networkType: networkInfo?.network.toLowerCase() as 'autonomys' | 'substrate',
     };
   } catch (error) {
-    return { 
-      isValid: false, 
-      error: `Address validation failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    return {
+      isValid: false,
+      error: `Address validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
 }
@@ -110,7 +110,7 @@ function isValidAmount(amount: string): boolean {
   if (/^0+(\.0+)?$/.test(amount)) {
     return false; // Zero is not valid
   }
-  
+
   // For valid non-zero numbers, the regex already ensures it's a valid decimal format
   return true;
 }
@@ -151,22 +151,22 @@ const EXISTENTIAL_DEPOSIT_SHANNON = BigInt(1000000000000);
  */
 function ai3ToShannon(ai3Amount: string): bigint {
   const trimmed = ai3Amount.trim();
-  
+
   // Validate format - must be a valid decimal number (no scientific notation)
   if (!/^\d+(\.\d+)?$/.test(trimmed)) {
     throw new Error(`Invalid AI3 amount format: ${ai3Amount}`);
   }
-  
+
   // Handle decimal places by splitting on decimal point
   const [wholePart = '0', decimalPart = ''] = trimmed.split('.');
-  
+
   // Pad or truncate decimal part to exactly 18 digits
   const paddedDecimal = decimalPart.padEnd(SHANNON_DECIMALS, '0').slice(0, SHANNON_DECIMALS);
-  
+
   // Convert to BigInt Shannon
   const wholeShannon = BigInt(wholePart) * SHANNON_MULTIPLIER;
   const decimalShannon = BigInt(paddedDecimal);
-  
+
   return wholeShannon + decimalShannon;
 }
 
@@ -179,15 +179,15 @@ function shannonToAi3(shannonAmount: bigint): string {
   const shannon = shannonAmount;
   const wholePart = shannon / SHANNON_MULTIPLIER;
   const decimalPart = shannon % SHANNON_MULTIPLIER;
-  
+
   if (decimalPart === 0n) {
     return wholePart.toString();
   }
-  
+
   // Format decimal part with trailing zeros removed
   const decimalStr = decimalPart.toString().padStart(SHANNON_DECIMALS, '0');
   const trimmedDecimal = decimalStr.replace(/0+$/, '');
-  
+
   return `${wholePart.toString()}.${trimmedDecimal}`;
 }
 
@@ -208,7 +208,6 @@ function normalizeAmount(amount: string): bigint {
 function formatAi3Amount(shannonAmount: bigint): string {
   return shannonToAi3(shannonAmount);
 }
-
 
 /**
  * Convert AI3 amount (number) to Shannon (bigint)
@@ -291,7 +290,9 @@ export class CSVValidator {
 
           // Warn about amounts below existential deposit
           if (!meetsExistentialDeposit(amount)) {
-            warnings.push(`Line ${currentLineNumber}: Amount ${amount} AI3 is below existential deposit (${EXISTENTIAL_DEPOSIT_AI3} AI3). This may fail for new accounts or accounts with insufficient balance.`);
+            warnings.push(
+              `Line ${currentLineNumber}: Amount ${amount} AI3 is below existential deposit (${EXISTENTIAL_DEPOSIT_AI3} AI3). This may fail for new accounts or accounts with insufficient balance.`
+            );
           }
 
           // Convert to Shannon for precise arithmetic
@@ -463,18 +464,18 @@ export const distributionConfigSchema = Joi.object({
   confirmationBlocks: Joi.number().integer().min(1).max(100).default(2),
 });
 
-export { 
-  validateAddress, 
-  isValidAutonomysAddress, 
-  isValidAmount, 
-  normalizeAmount, 
+export {
+  validateAddress,
+  isValidAutonomysAddress,
+  isValidAmount,
+  normalizeAmount,
   ai3ToShannon,
   ai3NumberToShannon,
   shannonToAi3,
   formatAi3Amount,
-  getAddressNetworkInfo, 
+  getAddressNetworkInfo,
   AddressValidationResult,
   meetsExistentialDeposit,
   EXISTENTIAL_DEPOSIT_AI3,
-  EXISTENTIAL_DEPOSIT_SHANNON
+  EXISTENTIAL_DEPOSIT_SHANNON,
 };

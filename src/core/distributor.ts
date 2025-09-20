@@ -4,7 +4,13 @@ import { ApiPromise } from '@polkadot/api';
 import { Keyring } from '@polkadot/keyring';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
-import { DistributionRecord, DistributionSummary, TransactionResult, AppConfig, TransactionFailureHandler } from '../types';
+import {
+  DistributionRecord,
+  DistributionSummary,
+  TransactionResult,
+  AppConfig,
+  TransactionFailureHandler,
+} from '../types';
 import { getNetworkConfig } from '../config/networks';
 import Logger from '../utils/logger';
 import { ResumeManager } from './resume-manager';
@@ -102,10 +108,7 @@ export class TokenDistributor {
       completed: 0,
       failed: 0,
       skipped: 0,
-      totalAmount: records.reduce(
-        (sum, record) => sum + record.amount,
-        0n
-      ),
+      totalAmount: records.reduce((sum, record) => sum + record.amount, 0n),
       distributedAmount: 0n,
       failedAmount: 0n,
       startTime: new Date(),
@@ -161,8 +164,10 @@ export class TokenDistributor {
             );
 
             // Log transaction success with hash
-            console.log(`✅ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${result.transactionHash}`);
-            
+            console.log(
+              `✅ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${result.transactionHash}`
+            );
+
             // Log to CSV if logger is available
             if (csvLogger) {
               await csvLogger.logTransaction(record);
@@ -186,15 +191,22 @@ export class TokenDistributor {
           );
 
           // Log transaction failure
-          console.log(`❌ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${record.error}`);
-          
+          console.log(
+            `❌ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${record.error}`
+          );
+
           // Log to CSV if logger is available
           if (csvLogger) {
             await csvLogger.logTransaction(record);
           }
 
           // Ask user what to do with failed transaction
-          const action = await this.handleTransactionFailure(record, i, error, record.attempts || 1);
+          const action = await this.handleTransactionFailure(
+            record,
+            i,
+            error,
+            record.attempts || 1
+          );
 
           switch (action) {
             case 'retry':
@@ -213,7 +225,7 @@ export class TokenDistributor {
                 completedRecords: summary.completed,
                 failedRecords: summary.failed,
                 skippedRecords: summary.skipped,
-                totalRecords: summary.totalRecords
+                totalRecords: summary.totalRecords,
               });
               return summary;
           }
@@ -379,9 +391,7 @@ export class TokenDistributor {
       sufficient,
       currentBalance,
       requiredAmount,
-      ...(sufficient
-        ? {}
-        : { shortfall: requiredAmount - currentBalance }),
+      ...(sufficient ? {} : { shortfall: requiredAmount - currentBalance }),
     };
 
     this.logger.info('Balance validation completed', {

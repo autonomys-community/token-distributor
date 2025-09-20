@@ -2,7 +2,7 @@ import {
   stringifyWithBigInt,
   parseWithBigInt,
   convertDistributionStringsToBigInt,
-  bigIntReplacer
+  bigIntReplacer,
 } from '../../src/utils/bigint-json';
 
 describe('BigInt JSON Utilities', () => {
@@ -12,8 +12,8 @@ describe('BigInt JSON Utilities', () => {
         normalValue: 123,
         bigIntValue: BigInt('123456789012345678901234567890'),
         nested: {
-          anotherBigInt: BigInt('987654321')
-        }
+          anotherBigInt: BigInt('987654321'),
+        },
       };
 
       const result = stringifyWithBigInt(obj);
@@ -27,7 +27,7 @@ describe('BigInt JSON Utilities', () => {
     test('should handle arrays with BigInt values', () => {
       const arr = [
         { amount: BigInt('1000000000000000000') },
-        { amount: BigInt('2000000000000000000') }
+        { amount: BigInt('2000000000000000000') },
       ];
 
       const result = stringifyWithBigInt(arr);
@@ -39,9 +39,9 @@ describe('BigInt JSON Utilities', () => {
 
     test('should format with proper spacing', () => {
       const obj = { bigIntValue: BigInt('123') };
-      
+
       const result = stringifyWithBigInt(obj, 2);
-      
+
       expect(result).toContain('\n');
       expect(result).toContain('  ');
     });
@@ -65,7 +65,7 @@ describe('BigInt JSON Utilities', () => {
       const record = {
         address: 'test-address',
         amount: '1000000000000000000',
-        status: 'pending'
+        status: 'pending',
       };
 
       convertDistributionStringsToBigInt(record);
@@ -83,7 +83,7 @@ describe('BigInt JSON Utilities', () => {
         totalAmount: '5000000000000000000',
         distributedAmount: '0',
         failedAmount: '0',
-        startTime: new Date()
+        startTime: new Date(),
       };
 
       convertDistributionStringsToBigInt(summary);
@@ -96,7 +96,7 @@ describe('BigInt JSON Utilities', () => {
     test('should handle arrays of records', () => {
       const records = [
         { address: 'addr1', amount: '1000000000000000000', status: 'pending' },
-        { address: 'addr2', amount: '2000000000000000000', status: 'pending' }
+        { address: 'addr2', amount: '2000000000000000000', status: 'pending' },
       ];
 
       convertDistributionStringsToBigInt(records);
@@ -107,9 +107,7 @@ describe('BigInt JSON Utilities', () => {
 
     test('should handle nested distribution data structure', () => {
       const resumeData = {
-        records: [
-          { address: 'addr1', amount: '1000000000000000000', status: 'pending' }
-        ],
+        records: [{ address: 'addr1', amount: '1000000000000000000', status: 'pending' }],
         summary: {
           totalRecords: 1,
           completed: 0,
@@ -118,10 +116,10 @@ describe('BigInt JSON Utilities', () => {
           totalAmount: '1000000000000000000',
           distributedAmount: '0',
           failedAmount: '0',
-          startTime: new Date()
+          startTime: new Date(),
         },
         lastProcessedIndex: 0,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       convertDistributionStringsToBigInt(resumeData);
@@ -136,7 +134,7 @@ describe('BigInt JSON Utilities', () => {
       const record = {
         address: 'test-address',
         amount: BigInt('1000000000000000000'), // Already BigInt
-        status: 'pending'
+        status: 'pending',
       };
 
       convertDistributionStringsToBigInt(record);
@@ -159,22 +157,20 @@ describe('BigInt JSON Utilities', () => {
   describe('round-trip serialization', () => {
     test('should maintain BigInt values through serialize/deserialize cycle', () => {
       const original = {
-        records: [
-          { address: 'addr1', amount: BigInt('1000000000000000000'), status: 'pending' }
-        ],
+        records: [{ address: 'addr1', amount: BigInt('1000000000000000000'), status: 'pending' }],
         summary: {
           totalAmount: BigInt('1000000000000000000'),
           distributedAmount: BigInt('500000000000000000'),
-          failedAmount: BigInt('0')
-        }
+          failedAmount: BigInt('0'),
+        },
       };
 
       // Serialize
       const serialized = stringifyWithBigInt(original);
-      
+
       // Parse back
       const parsed = parseWithBigInt(serialized);
-      
+
       // Convert strings back to BigInt
       convertDistributionStringsToBigInt(parsed);
 

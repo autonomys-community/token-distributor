@@ -8,8 +8,11 @@
  * Converts BigInt values to strings during serialization
  */
 export function stringifyWithBigInt(obj: any, space?: number): string {
-  return JSON.stringify(obj, (key, value) =>
-    typeof value === 'bigint' ? value.toString() : value, space);
+  return JSON.stringify(
+    obj,
+    (key, value) => (typeof value === 'bigint' ? value.toString() : value),
+    space
+  );
 }
 
 /**

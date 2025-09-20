@@ -29,18 +29,21 @@ let mockCsvContent = '';
 // Helper to set mock CSV content for tests
 const setMockCsvContent = (content: string) => {
   mockCsvContent = content;
-  
+
   // Update the mock implementation
   (fs.createReadStream as jest.Mock).mockReturnValue({
     pipe: jest.fn().mockReturnValue({
       on: jest.fn().mockImplementation((event, callback) => {
         const lines = mockCsvContent.split('\n').filter(line => line.trim());
-        
+
         if (event === 'data') {
           // Parse CSV content and emit row events
           lines.forEach((line, index) => {
             const [address, amount] = line.split(',');
-            setTimeout(() => callback({ address: address?.trim(), amount: amount?.trim() }), index + 1);
+            setTimeout(
+              () => callback({ address: address?.trim(), amount: amount?.trim() }),
+              index + 1
+            );
           });
         } else if (event === 'end') {
           setTimeout(() => callback(), lines.length + 10);
@@ -48,8 +51,8 @@ const setMockCsvContent = (content: string) => {
           // Store error callback for potential use
         }
         return this;
-      })
-    })
+      }),
+    }),
   });
 };
 
@@ -343,9 +346,10 @@ describe('Amount Validation', () => {
           const shannon = ai3ToShannon(ai3Value);
           const backToAi3 = shannonToAi3(shannon);
           // Handle truncation for values beyond 18 decimals
-          const expectedAi3 = ai3Value.includes('.') && ai3Value.split('.')[1].length > 18
-            ? ai3Value.split('.')[0] + '.' + ai3Value.split('.')[1].slice(0, 18)
-            : ai3Value;
+          const expectedAi3 =
+            ai3Value.includes('.') && ai3Value.split('.')[1].length > 18
+              ? ai3Value.split('.')[0] + '.' + ai3Value.split('.')[1].slice(0, 18)
+              : ai3Value;
           expect(backToAi3).toBe(expectedAi3);
         });
       });
@@ -450,13 +454,15 @@ describe('CSV Validation', () => {
   test('should handle missing CSV file', async () => {
     // Mock pathExists to return false for this test
     (fs.pathExists as jest.Mock).mockResolvedValueOnce(false);
-    
-    await expect(validator.validateCSV('nonexistent.csv')).rejects.toThrow('CSV file does not exist');
+
+    await expect(validator.validateCSV('nonexistent.csv')).rejects.toThrow(
+      'CSV file does not exist'
+    );
   });
 
   test('should warn about large amounts', async () => {
     const csvContent = `${testAddresses.validAutonomys},2000000`;
-    
+
     setMockCsvContent(csvContent);
     const result = await validator.validateCSV('mock-file.csv');
 
@@ -468,18 +474,20 @@ describe('CSV Validation', () => {
 
   test('should warn about very small amounts in Shannon units', async () => {
     const csvContent = `${testAddresses.validAutonomys},0.000000000000000005`; // 5 Shannon
-    
+
     setMockCsvContent(csvContent);
     const result = await validator.validateCSV('mock-file.csv');
 
     expect(result.isValid).toBe(true);
     expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.warnings.some(w => w.includes('Shannon') && w.includes('verify precision'))).toBe(true);
+    expect(result.warnings.some(w => w.includes('Shannon') && w.includes('verify precision'))).toBe(
+      true
+    );
   });
 
   test('should warn about amounts below existential deposit', async () => {
     const csvContent = `${testAddresses.validAutonomys},0.0000000000000005`; // 500 Shannon (below ED)
-    
+
     setMockCsvContent(csvContent);
     const result = await validator.validateCSV('mock-file.csv');
 
@@ -490,7 +498,7 @@ describe('CSV Validation', () => {
 
   test('should accept amounts at existential deposit threshold', async () => {
     const csvContent = `${testAddresses.validAutonomys},0.000001`; // Exactly ED
-    
+
     setMockCsvContent(csvContent);
     const result = await validator.validateCSV('mock-file.csv');
 

@@ -175,17 +175,11 @@ export class UserPrompts {
   ): Promise<'abort' | 'continue'> {
     console.log(chalk.red('\n💰 Insufficient Balance'));
     console.log(
-      chalk.white(
-        `Distribution Amount: ${chalk.cyan(formatAi3Amount(distributionAmount))} tokens`
-      )
+      chalk.white(`Distribution Amount: ${chalk.cyan(formatAi3Amount(distributionAmount))} tokens`)
     );
     console.log(chalk.white(`Gas Buffer: ${chalk.cyan(formatAi3Amount(gasBuffer))} tokens`));
-    console.log(
-      chalk.white(`Total Required: ${chalk.yellow(formatAi3Amount(required))} tokens`)
-    );
-    console.log(
-      chalk.white(`Available: ${chalk.yellow(formatAi3Amount(available))} tokens`)
-    );
+    console.log(chalk.white(`Total Required: ${chalk.yellow(formatAi3Amount(required))} tokens`));
+    console.log(chalk.white(`Available: ${chalk.yellow(formatAi3Amount(available))} tokens`));
     console.log(chalk.red(`Shortfall: ${chalk.red(formatAi3Amount(shortfall))} tokens`));
 
     const { action } = await inquirer.prompt([
@@ -312,7 +306,11 @@ export class UserPrompts {
     if (summary.abortedByUser) {
       console.log(chalk.yellow('\n⏹️ Distribution Aborted'));
       console.log(chalk.white('You chose to stop the distribution.'));
-      console.log(chalk.white(`Progress before abort: ${chalk.cyan(summary.completed)}/${chalk.cyan(summary.totalRecords)} transactions`));
+      console.log(
+        chalk.white(
+          `Progress before abort: ${chalk.cyan(summary.completed)}/${chalk.cyan(summary.totalRecords)} transactions`
+        )
+      );
       if (summary.completed > 0) {
         console.log(chalk.white(`Completed: ${chalk.green(summary.completed)}`));
       }
@@ -322,12 +320,18 @@ export class UserPrompts {
       if (summary.skipped > 0) {
         console.log(chalk.white(`Skipped: ${chalk.yellow(summary.skipped)}`));
       }
-      console.log(chalk.blue('\n💾 Your progress has been saved. You can resume the distribution later.'));
+      console.log(
+        chalk.blue('\n💾 Your progress has been saved. You can resume the distribution later.')
+      );
     } else if (!summary.endTime) {
       // Distribution was paused (endTime not set)
       console.log(chalk.yellow('\n⏸️ Distribution Paused'));
       console.log(chalk.white('You chose to pause the distribution.'));
-      console.log(chalk.white(`Progress before pause: ${chalk.cyan(summary.completed)}/${chalk.cyan(summary.totalRecords)} transactions`));
+      console.log(
+        chalk.white(
+          `Progress before pause: ${chalk.cyan(summary.completed)}/${chalk.cyan(summary.totalRecords)} transactions`
+        )
+      );
       if (summary.completed > 0) {
         console.log(chalk.white(`Completed: ${chalk.green(summary.completed)}`));
       }
@@ -337,7 +341,9 @@ export class UserPrompts {
       if (summary.skipped > 0) {
         console.log(chalk.white(`Skipped: ${chalk.yellow(summary.skipped)}`));
       }
-      console.log(chalk.blue('\n💾 Your progress has been saved. You can resume the distribution later.'));
+      console.log(
+        chalk.blue('\n💾 Your progress has been saved. You can resume the distribution later.')
+      );
     } else {
       // Distribution completed successfully
       console.log(chalk.green('\n✅ Distribution Complete!'));

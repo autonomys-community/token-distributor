@@ -12,7 +12,7 @@ export class CSVTransactionLogger {
     const baseName = path.basename(sourceFilename, path.extname(sourceFilename));
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const logFileName = `${baseName}-transactions-${timestamp}.csv`;
-    
+
     this.logFilePath = path.join('logs', logFileName);
   }
 
@@ -25,7 +25,7 @@ export class CSVTransactionLogger {
     // Write CSV header
     const header = 'SourceFileRowNumber,Address,Amount,Status,TransactionHash\n';
     await fs.writeFile(this.logFilePath, header);
-    
+
     this.isInitialized = true;
   }
 
@@ -37,14 +37,14 @@ export class CSVTransactionLogger {
     const rowNumber = record.sourceRowNumber || 0;
     const amount = formatAi3Amount(record.amount);
     const transactionHash = record.transactionHash || '';
-    
+
     // Escape any commas or quotes in the data
     const address = this.escapeCSVField(record.address);
     const status = this.escapeCSVField(record.status);
     const hash = this.escapeCSVField(transactionHash);
-    
+
     const csvLine = `${rowNumber},${address},${amount},${status},${hash}\n`;
-    
+
     // Append to file
     await fs.appendFile(this.logFilePath, csvLine);
   }
