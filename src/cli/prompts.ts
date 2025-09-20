@@ -406,21 +406,13 @@ export class UserPrompts {
     return chalk.green('█'.repeat(filled)) + chalk.gray('░'.repeat(empty));
   }
 
-  displayTransactionSuccess(
-    record: DistributionRecord,
-    index: number,
-    total: number
-  ): void {
+  displayTransactionSuccess(record: DistributionRecord, index: number, total: number): void {
     const shortAddress = `${record.address.slice(0, 8)}...${record.address.slice(-6)}`;
     const transactionHash = record.transactionHash || 'unknown';
     console.log(`✅ Transaction ${index + 1}/${total}: ${shortAddress} - ${transactionHash}`);
   }
 
-  displayTransactionFailure(
-    record: DistributionRecord,
-    index: number,
-    total: number
-  ): void {
+  displayTransactionFailure(record: DistributionRecord, index: number, total: number): void {
     const shortAddress = `${record.address.slice(0, 8)}...${record.address.slice(-6)}`;
     const error = record.error || 'unknown error';
     console.log(`❌ Transaction ${index + 1}/${total}: ${shortAddress} - ${error}`);
