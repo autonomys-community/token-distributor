@@ -172,7 +172,8 @@ class TokenDistributorApp {
       const summary = await this.distributor.distribute(
         resumeData.records, 
         resumeData.lastProcessedIndex,
-        resumeData.sourceFilename
+        resumeData.sourceFilename,
+        this.prompts
       );
 
       await this.prompts.showDistributionComplete(summary);
@@ -235,7 +236,7 @@ class TokenDistributorApp {
     }, 1000);
 
     try {
-      const summary = await this.distributor.distribute(records, 0, sourceFilename);
+      const summary = await this.distributor.distribute(records, 0, sourceFilename, this.prompts);
       
       clearInterval(progressTracker);
       console.log('\n'); // New line after progress bar

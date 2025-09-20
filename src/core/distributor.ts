@@ -16,6 +16,7 @@ import Logger from '../utils/logger';
 import { ResumeManager } from './resume-manager';
 import { ai3NumberToShannon } from '../utils/validation';
 import { CSVTransactionLogger } from '../utils/csv-logger';
+import { UserPrompts } from '../cli/prompts';
 
 export class TokenDistributor {
   private api?: ApiPromise;
@@ -89,7 +90,8 @@ export class TokenDistributor {
   async distribute(
     records: DistributionRecord[],
     resumeFromIndex: number = 0,
-    sourceFilename?: string
+    sourceFilename?: string,
+    userPrompts?: UserPrompts
   ): Promise<DistributionSummary> {
     if (!this.isConnected || !this.api || !this.account) {
       throw new Error('Distributor not initialized. Call initialize() first.');
@@ -163,10 +165,10 @@ export class TokenDistributor {
               result.blockHash
             );
 
-            // Log transaction success with hash
-            console.log(
-              `✅ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${result.transactionHash}`
-            );
+            // Display transaction success through UI layer
+            if (userPrompts) {
+              userPrompts.displayTransactionSuccess(record, i, records.length);
+            }
 
             // Log to CSV if logger is available
             if (csvLogger) {
@@ -190,10 +192,10 @@ export class TokenDistributor {
             record.attempts
           );
 
-          // Log transaction failure
-          console.log(
-            `❌ Transaction ${i + 1}/${records.length}: ${record.address.slice(0, 8)}...${record.address.slice(-6)} - ${record.error}`
-          );
+          // Display transaction failure through UI layer
+          if (userPrompts) {
+            userPrompts.displayTransactionFailure(record, i, records.length);
+          }
 
           // Log to CSV if logger is available
           if (csvLogger) {
