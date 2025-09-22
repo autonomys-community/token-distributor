@@ -14,9 +14,9 @@ import {
 import { getNetworkConfig } from '../config/networks';
 import Logger from '../utils/logger';
 import { ResumeManager } from './resume-manager';
-import { ai3NumberToShannon } from '../utils/validation';
 import { CSVTransactionLogger } from '../utils/csv-logger';
 import { UserPrompts } from '../cli/prompts';
+import { ai3ToShannons } from '@autonomys/auto-utils';
 
 export class TokenDistributor {
   private api?: ApiPromise;
@@ -384,7 +384,7 @@ export class TokenDistributor {
     const currentBalance = BigInt(currentBalanceString);
 
     // Add configurable AI3 tokens in Shannon for gas fees
-    const gasBuffer = ai3NumberToShannon(this.config.gasBufferAi3);
+    const gasBuffer = ai3ToShannons(this.config.gasBufferAi3.toString());
     const requiredAmount = totalAmount + gasBuffer;
 
     const sufficient = currentBalance >= requiredAmount;

@@ -1,17 +1,12 @@
 import { TokenDistributor } from '../../src/core/distributor';
 import { AppConfig } from '../../src/types';
 import Logger from '../../src/utils/logger';
-import { ai3NumberToShannon } from '../../src/utils/validation';
-
+import { ai3ToShannons } from '@autonomys/auto-utils';
 // Mock the Auto SDK modules
 jest.mock('@autonomys/auto-consensus', () => ({
   activate: jest.fn(),
   transfer: jest.fn(),
   balance: jest.fn(),
-}));
-
-jest.mock('@autonomys/auto-utils', () => ({
-  activateWallet: jest.fn(),
 }));
 
 jest.mock('@polkadot/api', () => ({
@@ -99,13 +94,13 @@ describe('TokenDistributor', () => {
     });
 
     test('should include gas buffer in balance calculation - sufficient balance', async () => {
-      const distributionAmount = ai3NumberToShannon(100); // 100 AI3
+      const distributionAmount = ai3ToShannons('100'); // 100 AI3
 
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
       expect(result.currentBalance).toBe(BigInt('1000000000000000000000')); // 1000 AI3
-      expect(result.requiredAmount).toBe(distributionAmount + ai3NumberToShannon(1)); // 100 AI3 + 1 AI3 gas
+      expect(result.requiredAmount).toBe(distributionAmount + ai3ToShannons('1')); // 100 AI3 + 1 AI3 gas
       expect(result.shortfall).toBeUndefined();
 
       // Verify logger was called with correct information
@@ -114,22 +109,22 @@ describe('TokenDistributor', () => {
         expect.objectContaining({
           currentBalance: '1000000000000000000000',
           totalDistributionAmount: distributionAmount.toString(),
-          gasBuffer: ai3NumberToShannon(1).toString(),
-          requiredAmount: (distributionAmount + ai3NumberToShannon(1)).toString(),
+          gasBuffer: ai3ToShannons('1').toString(),
+          requiredAmount: (distributionAmount + ai3ToShannons('1')).toString(),
           sufficient: true,
         })
       );
     });
 
     test('should include gas buffer in balance calculation - insufficient balance', async () => {
-      const distributionAmount = ai3NumberToShannon(999.5); // 999.5 AI3
+      const distributionAmount = ai3ToShannons('999.5'); // 999.5 AI3
 
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(false);
       expect(result.currentBalance).toBe(BigInt('1000000000000000000000')); // 1000 AI3
-      expect(result.requiredAmount).toBe(distributionAmount + ai3NumberToShannon(1)); // 999.5 AI3 + 1 AI3 gas = 1000.5 AI3
-      expect(result.shortfall).toBe(ai3NumberToShannon(0.5)); // Need 0.5 AI3 more
+      expect(result.requiredAmount).toBe(distributionAmount + ai3ToShannons('1')); // 999.5 AI3 + 1 AI3 gas = 1000.5 AI3
+      expect(result.shortfall).toBe(ai3ToShannons('0.5')); // Need 0.5 AI3 more
 
       // Verify logger was called with shortfall information
       expect(mockLogger.info).toHaveBeenCalledWith(
@@ -137,10 +132,10 @@ describe('TokenDistributor', () => {
         expect.objectContaining({
           currentBalance: '1000000000000000000000',
           totalDistributionAmount: distributionAmount.toString(),
-          gasBuffer: ai3NumberToShannon(1).toString(),
-          requiredAmount: (distributionAmount + ai3NumberToShannon(1)).toString(),
+          gasBuffer: ai3ToShannons('1').toString(),
+          requiredAmount: (distributionAmount + ai3ToShannons('1')).toString(),
           sufficient: false,
-          shortfall: ai3NumberToShannon(0.5).toString(),
+          shortfall: ai3ToShannons('0.5').toString(),
         })
       );
     });
@@ -153,36 +148,36 @@ describe('TokenDistributor', () => {
         .spyOn(customDistributor, 'checkDistributorBalance')
         .mockImplementation(async () => '1000000000000000000000'); // 1000 AI3
 
-      const distributionAmount = ai3NumberToShannon(100); // 100 AI3
+      const distributionAmount = ai3ToShannons('100'); // 100 AI3
 
       const result = await customDistributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
-      expect(result.requiredAmount).toBe(distributionAmount + ai3NumberToShannon(5)); // 100 AI3 + 5 AI3 gas
+      expect(result.requiredAmount).toBe(distributionAmount + ai3ToShannons('5')); // 100 AI3 + 5 AI3 gas
 
       // Verify logger was called with correct gas buffer
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Balance validation completed',
         expect.objectContaining({
-          gasBuffer: ai3NumberToShannon(5).toString(), // Should be 5 AI3, not 1 AI3
+          gasBuffer: ai3ToShannons('5').toString(), // Should be 5 AI3, not 1 AI3
         })
       );
     });
 
     test('should handle edge case - exactly required amount', async () => {
-      const distributionAmount = ai3NumberToShannon(999); // 999 AI3
+      const distributionAmount = ai3ToShannons('999'); // 999 AI3
 
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
-      expect(result.requiredAmount).toBe(distributionAmount + ai3NumberToShannon(1)); // 999 AI3 + 1 AI3 gas = 1000 AI3
+      expect(result.requiredAmount).toBe(distributionAmount + ai3ToShannons('1')); // 999 AI3 + 1 AI3 gas = 1000 AI3
       expect(result.shortfall).toBeUndefined();
     });
 
     test('should handle edge case - 1 Shannon short', async () => {
       // Mock balance to be exactly 1 Shannon less than required
-      const distributionAmount = ai3NumberToShannon(999); // 999 AI3
-      const requiredAmount = distributionAmount + ai3NumberToShannon(1); // 1000 AI3
+      const distributionAmount = ai3ToShannons('999'); // 999 AI3
+      const requiredAmount = distributionAmount + ai3ToShannons('1'); // 1000 AI3
       const availableBalance = requiredAmount - BigInt(1); // 1 Shannon short
 
       jest
@@ -196,16 +191,16 @@ describe('TokenDistributor', () => {
     });
 
     test('should handle very large distribution amounts', async () => {
-      const distributionAmount = ai3NumberToShannon(1000000000); // 1 billion AI3
+      const distributionAmount = ai3ToShannons('1000000000'); // 1 billion AI3
       // Mock a very large balance
       jest
         .spyOn(distributor, 'checkDistributorBalance')
-        .mockImplementation(async () => ai3NumberToShannon(2000000000).toString()); // 2 billion AI3
+        .mockImplementation(async () => ai3ToShannons('2000000000').toString()); // 2 billion AI3
 
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
-      expect(result.requiredAmount).toBe(distributionAmount + ai3NumberToShannon(1)); // 1 billion AI3 + 1 AI3 gas
+      expect(result.requiredAmount).toBe(distributionAmount + ai3ToShannons('1')); // 1 billion AI3 + 1 AI3 gas
     });
 
     test('should handle very small distribution amounts', async () => {
@@ -214,7 +209,7 @@ describe('TokenDistributor', () => {
       const result = await distributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
-      expect(result.requiredAmount).toBe(distributionAmount + ai3NumberToShannon(1)); // 1 Shannon + 1 AI3 gas
+      expect(result.requiredAmount).toBe(distributionAmount + ai3ToShannons('1')); // 1 Shannon + 1 AI3 gas
     });
 
     test('should handle zero gas buffer', async () => {
@@ -225,7 +220,7 @@ describe('TokenDistributor', () => {
         .spyOn(zeroGasDistributor, 'checkDistributorBalance')
         .mockImplementation(async () => '1000000000000000000000'); // 1000 AI3
 
-      const distributionAmount = ai3NumberToShannon(1000); // 1000 AI3
+      const distributionAmount = ai3ToShannons('1000'); // 1000 AI3
 
       const result = await zeroGasDistributor.validateSufficientBalance(distributionAmount);
 
@@ -241,12 +236,12 @@ describe('TokenDistributor', () => {
         .spyOn(fractionalGasDistributor, 'checkDistributorBalance')
         .mockImplementation(async () => '1000000000000000000000'); // 1000 AI3
 
-      const distributionAmount = ai3NumberToShannon(100); // 100 AI3
+      const distributionAmount = ai3ToShannons('100'); // 100 AI3
 
       const result = await fractionalGasDistributor.validateSufficientBalance(distributionAmount);
 
       expect(result.sufficient).toBe(true);
-      expect(result.requiredAmount).toBe(distributionAmount + ai3NumberToShannon(0.5)); // 100 AI3 + 0.5 AI3 gas
+      expect(result.requiredAmount).toBe(distributionAmount + ai3ToShannons('0.5')); // 100 AI3 + 0.5 AI3 gas
     });
   });
 

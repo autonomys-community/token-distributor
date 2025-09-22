@@ -1,11 +1,7 @@
-import {
-  ai3ToShannon,
-  shannonToAi3,
-  formatAi3Amount,
-  CSVValidator,
-} from '../src/utils/validation';
+import { CSVValidator } from '../src/utils/validation';
 import fs from 'fs-extra';
 import path from 'path';
+import { ai3ToShannons, shannonsToAi3 } from '@autonomys/auto-utils';
 
 // Mock fs-extra to prevent filesystem operations
 jest.mock('fs-extra', () => ({
@@ -85,9 +81,9 @@ describe('Shannon Precision Verification', () => {
       expect(records[0].amount).toBe(1n); // Exact Shannon amount
 
       // Verify conversion functions maintain precision
-      expect(ai3ToShannon('0.000000000000000001')).toBe(1n);
-      expect(shannonToAi3(1n)).toBe('0.000000000000000001');
-      expect(formatAi3Amount(1n)).toBe('0.000000000000000001');
+      expect(ai3ToShannons('0.000000000000000001')).toBe(1n);
+      expect(shannonsToAi3(1n)).toBe('0.000000000000000001');
+      expect(shannonsToAi3(1n)).toBe('0.000000000000000001');
     });
 
     test('Very small amounts below existential deposit should generate warnings', async () => {
@@ -106,12 +102,12 @@ describe('Shannon Precision Verification', () => {
       const expectedShannon = 1000000000000000000000000000n; // 1B * 10^18
 
       // Test conversion accuracy
-      expect(ai3ToShannon(oneBillionAI3)).toBe(expectedShannon);
-      expect(shannonToAi3(expectedShannon)).toBe(oneBillionAI3);
-      expect(formatAi3Amount(expectedShannon)).toBe(oneBillionAI3);
+      expect(ai3ToShannons(oneBillionAI3)).toBe(expectedShannon);
+      expect(shannonsToAi3(expectedShannon)).toBe(oneBillionAI3);
+      expect(shannonsToAi3(expectedShannon)).toBe(oneBillionAI3);
 
       // Test round-trip precision
-      const backToAI3 = shannonToAi3(ai3ToShannon(oneBillionAI3));
+      const backToAI3 = shannonsToAi3(ai3ToShannons(oneBillionAI3));
       expect(backToAI3).toBe(oneBillionAI3);
     });
 
@@ -119,12 +115,12 @@ describe('Shannon Precision Verification', () => {
       const maxPrecision = '123.123456789012345678';
       const expectedShannon = 123123456789012345678n;
 
-      expect(ai3ToShannon(maxPrecision)).toBe(expectedShannon);
-      expect(shannonToAi3(expectedShannon)).toBe(maxPrecision);
-      expect(formatAi3Amount(expectedShannon)).toBe(maxPrecision);
+      expect(ai3ToShannons(maxPrecision)).toBe(expectedShannon);
+      expect(shannonsToAi3(expectedShannon)).toBe(maxPrecision);
+      expect(shannonsToAi3(expectedShannon)).toBe(maxPrecision);
 
       // Test round-trip precision
-      const backToAI3 = shannonToAi3(ai3ToShannon(maxPrecision));
+      const backToAI3 = shannonsToAi3(ai3ToShannons(maxPrecision));
       expect(backToAI3).toBe(maxPrecision);
     });
 
@@ -150,7 +146,7 @@ describe('Shannon Precision Verification', () => {
 
       // Calculate expected total in Shannon using BigInt
       const expectedTotal = amounts.reduce((sum, amount) => {
-        return sum + ai3ToShannon(amount);
+        return sum + ai3ToShannons(amount);
       }, 0n);
 
       expect(validation.totalAmount).toBe(expectedTotal);
@@ -158,11 +154,11 @@ describe('Shannon Precision Verification', () => {
       // Test individual record precision
       const records = await validator.parseValidatedCSV('mock-file.csv');
       amounts.forEach((amount, i) => {
-        const expectedShannon = ai3ToShannon(amount);
+        const expectedShannon = ai3ToShannons(amount);
         expect(records[i].amount).toBe(expectedShannon);
 
         // Verify round-trip precision
-        const backToAI3 = shannonToAi3(expectedShannon);
+        const backToAI3 = shannonsToAi3(expectedShannon);
         expect(backToAI3).toBe(amount);
       });
     });
@@ -172,24 +168,24 @@ describe('Shannon Precision Verification', () => {
     test('Large sum calculations maintain precision', () => {
       // Create amounts that would cause floating point issues
       const amounts = ['1.1', '2.2', '3.3'];
-      const shannonAmounts = amounts.map(ai3ToShannon);
+      const shannonAmounts = amounts.map(amount => ai3ToShannons(amount));
       const total = shannonAmounts.reduce((sum, amount) => sum + BigInt(amount), BigInt(0));
 
       // Expected: 6.6 AI3 = 6600000000000000000 Shannon
       expect(total.toString()).toBe('6600000000000000000');
 
       // Verify exact conversion back
-      const backToAI3 = shannonToAi3(total);
+      const backToAI3 = shannonsToAi3(total);
       expect(backToAI3).toBe('6.6');
     });
 
     test('Very large sums without precision loss', () => {
       // 1000 records of 1 million AI3 each = 1 billion AI3 total
-      const records = Array.from({ length: 1000 }, () => ai3ToShannon('1000000'));
+      const records = Array.from({ length: 1000 }, () => ai3ToShannons('1000000'));
       const total = records.reduce((sum, amount) => sum + amount, 0n);
 
       expect(total.toString()).toBe('1000000000000000000000000000');
-      expect(shannonToAi3(total)).toBe('1000000000');
+      expect(shannonsToAi3(total)).toBe('1000000000');
     });
 
     test('Precision beyond JavaScript safe integers', () => {
@@ -197,12 +193,12 @@ describe('Shannon Precision Verification', () => {
       const largeShannon = '9007199254740992000'; // Beyond MAX_SAFE_INTEGER
 
       // Our BigInt implementation handles both
-      const ai3FromSafe = shannonToAi3(BigInt(maxSafeShannon));
-      const ai3FromLarge = shannonToAi3(BigInt(largeShannon));
+      const ai3FromSafe = shannonsToAi3(BigInt(maxSafeShannon));
+      const ai3FromLarge = shannonsToAi3(BigInt(largeShannon));
 
       // Verify round-trip precision
-      expect(ai3ToShannon(ai3FromSafe)).toBe(BigInt(maxSafeShannon));
-      expect(ai3ToShannon(ai3FromLarge)).toBe(BigInt(largeShannon));
+      expect(ai3ToShannons(ai3FromSafe)).toBe(BigInt(maxSafeShannon));
+      expect(ai3ToShannons(ai3FromLarge)).toBe(BigInt(largeShannon));
 
       // Verify JavaScript would fail
       expect(Number.isSafeInteger(parseInt(largeShannon))).toBe(false);
@@ -220,11 +216,11 @@ describe('Shannon Precision Verification', () => {
       ];
 
       testCases.forEach(({ shannon, expected }) => {
-        const formatted = formatAi3Amount(BigInt(shannon));
+        const formatted = shannonsToAi3(BigInt(shannon));
         expect(formatted).toBe(expected);
         
         // Verify round-trip precision
-        const backToShannon = ai3ToShannon(formatted);
+        const backToShannon = ai3ToShannons(formatted);
         expect(backToShannon).toBe(BigInt(shannon));
       });
     });
@@ -239,7 +235,7 @@ describe('Shannon Precision Verification', () => {
       ];
 
       scientificNotation.forEach(notation => {
-        expect(() => ai3ToShannon(notation)).toThrow('Invalid AI3 amount format');
+        expect(() => ai3ToShannons(notation)).toThrow('invalid numeric string');
       });
     });
 
@@ -248,38 +244,45 @@ describe('Shannon Precision Verification', () => {
         'abc',
         '1.2.3',
         '1a.5',
-        '-1',
         'NaN',
         'Infinity',
-        '',
         '1.',
         '.5',
       ];
 
       invalidFormats.forEach(format => {
-        expect(() => ai3ToShannon(format)).toThrow('Invalid AI3 amount format');
+        expect(() => ai3ToShannons(format)).toThrow('invalid numeric string');
       });
+    });
+    
+    test('Empty string properly rejected', () => {
+      expect(() => ai3ToShannons('')).toThrow('empty string');
+    });
+    
+    test('Negative numbers are accepted by SDK', () => {
+      // Note: SDK allows negative numbers, our custom implementation rejected them
+      expect(ai3ToShannons('-1')).toBe(-1000000000000000000n);
     });
   });
 
   describe('Shannon Arithmetic Edge Cases', () => {
     test('Zero amounts handled correctly', () => {
-      expect(ai3ToShannon('0')).toBe(0n);
-      expect(ai3ToShannon('0.0')).toBe(0n);
-      expect(ai3ToShannon('0.000000000000000000')).toBe(0n);
-      expect(shannonToAi3(0n)).toBe('0');
-      expect(formatAi3Amount(0n)).toBe('0');
+      expect(ai3ToShannons('0')).toBe(0n);
+      expect(ai3ToShannons('0.0')).toBe(0n);
+      expect(ai3ToShannons('0.000000000000000000')).toBe(0n);
+      expect(shannonsToAi3(0n)).toBe('0');
+      expect(shannonsToAi3(0n)).toBe('0');
     });
 
     test('Trailing zeros handled correctly', () => {
-      expect(ai3ToShannon('1.500000000000000000')).toBe(1500000000000000000n);
-      expect(shannonToAi3(1500000000000000000n)).toBe('1.5'); // Removes trailing zeros
-      expect(formatAi3Amount(1000000000000000000n)).toBe('1'); // No decimal for whole numbers
+      expect(ai3ToShannons('1.500000000000000000')).toBe(1500000000000000000n);
+      expect(shannonsToAi3(1500000000000000000n)).toBe('1.5'); // Removes trailing zeros
+      expect(shannonsToAi3(1000000000000000000n)).toBe('1'); // No decimal for whole numbers
     });
 
     test('Leading zeros handled correctly', () => {
-      expect(ai3ToShannon('001.5')).toBe(1500000000000000000n);
-      expect(ai3ToShannon('0000000001')).toBe(1000000000000000000n);
+      expect(ai3ToShannons('001.5')).toBe(1500000000000000000n);
+      expect(ai3ToShannons('0000000001')).toBe(1000000000000000000n);
     });
 
     test('Very precise fractions handled correctly', () => {
@@ -291,8 +294,8 @@ describe('Shannon Precision Verification', () => {
       ];
 
       preciseAmounts.forEach(amount => {
-        const shannon = ai3ToShannon(amount);
-        const backToAI3 = shannonToAi3(shannon);
+        const shannon = ai3ToShannons(amount);
+        const backToAI3 = shannonsToAi3(shannon);
         expect(backToAI3).toBe(amount);
       });
     });

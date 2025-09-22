@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import csv from 'csv-parser';
 import Joi from 'joi';
 import { decodeAddress, encodeAddress } from '@polkadot/util-crypto';
-import { isAddress } from '@autonomys/auto-utils';
+import { isAddress, ai3ToShannons } from '@autonomys/auto-utils';
 import { DistributionRecord, ValidationResult } from '../types';
 import Logger from './logger';
 
@@ -124,99 +124,17 @@ function isValidAmount(amount: string): boolean {
  */
 function meetsExistentialDeposit(amount: string): boolean {
   try {
-    const shannonAmount = ai3ToShannon(amount);
+    const shannonAmount = ai3ToShannons(amount);
     return shannonAmount >= EXISTENTIAL_DEPOSIT_SHANNON;
   } catch {
     return false;
   }
 }
 
-/**
- * Shannon utility functions for Autonomys AI3 token precision
- * 1 AI3 = 10^18 Shannon (similar to how 1 ETH = 10^18 wei)
- */
-
-// Constants for Shannon precision
-const SHANNON_DECIMALS = 18;
-const SHANNON_MULTIPLIER = BigInt(10) ** BigInt(SHANNON_DECIMALS);
-
 // Existential Deposit: 0.000001 AI3 = 1,000,000,000,000 Shannon
 const EXISTENTIAL_DEPOSIT_AI3 = '0.000001';
 const EXISTENTIAL_DEPOSIT_SHANNON = BigInt(1000000000000);
 
-/**
- * Convert AI3 amount (decimal string) to Shannon (smallest unit)
- * @param ai3Amount - Amount in AI3 (e.g., "1.5" or "0.000000000000000001")
- * @returns Shannon amount as bigint
- */
-function ai3ToShannon(ai3Amount: string): bigint {
-  const trimmed = ai3Amount.trim();
-
-  // Validate format - must be a valid decimal number (no scientific notation)
-  if (!/^\d+(\.\d+)?$/.test(trimmed)) {
-    throw new Error(`Invalid AI3 amount format: ${ai3Amount}`);
-  }
-
-  // Handle decimal places by splitting on decimal point
-  const [wholePart = '0', decimalPart = ''] = trimmed.split('.');
-
-  // Pad or truncate decimal part to exactly 18 digits
-  const paddedDecimal = decimalPart.padEnd(SHANNON_DECIMALS, '0').slice(0, SHANNON_DECIMALS);
-
-  // Convert to BigInt Shannon
-  const wholeShannon = BigInt(wholePart) * SHANNON_MULTIPLIER;
-  const decimalShannon = BigInt(paddedDecimal);
-
-  return wholeShannon + decimalShannon;
-}
-
-/**
- * Convert Shannon amount to AI3 (decimal format)
- * @param shannonAmount - Amount in Shannon (smallest units)
- * @returns AI3 amount as decimal string
- */
-function shannonToAi3(shannonAmount: bigint): string {
-  const shannon = shannonAmount;
-  const wholePart = shannon / SHANNON_MULTIPLIER;
-  const decimalPart = shannon % SHANNON_MULTIPLIER;
-
-  if (decimalPart === 0n) {
-    return wholePart.toString();
-  }
-
-  // Format decimal part with trailing zeros removed
-  const decimalStr = decimalPart.toString().padStart(SHANNON_DECIMALS, '0');
-  const trimmedDecimal = decimalStr.replace(/0+$/, '');
-
-  return `${wholePart.toString()}.${trimmedDecimal}`;
-}
-
-/**
- * Normalize amount from AI3 to Shannon for internal processing
- * @param amount - AI3 amount as string
- * @returns Shannon amount as bigint
- */
-function normalizeAmount(amount: string): bigint {
-  return ai3ToShannon(amount);
-}
-
-/**
- * Format Shannon amount back to human-readable AI3
- * @param shannonAmount - Shannon amount as bigint
- * @returns Formatted AI3 amount
- */
-function formatAi3Amount(shannonAmount: bigint): string {
-  return shannonToAi3(shannonAmount);
-}
-
-/**
- * Convert AI3 amount (number) to Shannon (bigint)
- * @param ai3Amount - Amount in AI3 as number
- * @returns Shannon amount as bigint
- */
-function ai3NumberToShannon(ai3Amount: number): bigint {
-  return ai3ToShannon(ai3Amount.toString());
-}
 
 export class CSVValidator {
   private logger: Logger;
@@ -296,7 +214,7 @@ export class CSVValidator {
           }
 
           // Convert to Shannon for precise arithmetic
-          const shannonAmount = normalizeAmount(amount);
+          const shannonAmount = ai3ToShannons(amount);
 
           // Check for very small amounts (less than 1000 Shannon)
           if (shannonAmount < 1000n) {
@@ -306,7 +224,7 @@ export class CSVValidator {
           }
 
           // Check for very large amounts (> 1M AI3 in Shannon)
-          const millionAI3InShannon = normalizeAmount('1000000');
+          const millionAI3InShannon = ai3ToShannons('1000000');
           if (shannonAmount > millionAI3InShannon) {
             warnings.push(
               `Line ${currentLineNumber}: Large amount (${amount}) - please verify this is correct`
@@ -411,7 +329,7 @@ export class CSVValidator {
         if (address && amount && isValidAutonomysAddress(address) && isValidAmount(amount)) {
           records.push({
             address,
-            amount: normalizeAmount(amount),
+            amount: ai3ToShannons(amount),
             status: 'pending',
             sourceRowNumber: currentRowNumber,
           });
@@ -468,14 +386,7 @@ export {
   validateAddress,
   isValidAutonomysAddress,
   isValidAmount,
-  normalizeAmount,
-  ai3ToShannon,
-  ai3NumberToShannon,
-  shannonToAi3,
-  formatAi3Amount,
   getAddressNetworkInfo,
   AddressValidationResult,
   meetsExistentialDeposit,
-  EXISTENTIAL_DEPOSIT_AI3,
-  EXISTENTIAL_DEPOSIT_SHANNON,
 };

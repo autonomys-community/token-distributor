@@ -2,7 +2,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import { DistributionRecord, ValidationResult, ResumeData } from '../types';
 import { ResumeManager } from '../core/resume-manager';
-import { formatAi3Amount } from '../utils/validation';
+import { shannonsToAi3 } from '@autonomys/auto-utils';
 import Logger from '../utils/logger';
 
 export class UserPrompts {
@@ -24,7 +24,7 @@ export class UserPrompts {
     console.log(chalk.white(`Total Records: ${chalk.yellow(validation.recordCount)}`));
     console.log(
       chalk.white(
-        `Distribution Amount: ${chalk.yellow(formatAi3Amount(validation.totalAmount))} tokens`
+        `Distribution Amount: ${chalk.yellow(shannonsToAi3(validation.totalAmount))} tokens`
       )
     );
 
@@ -39,12 +39,12 @@ export class UserPrompts {
     if (balanceValidation) {
       console.log(
         chalk.white(
-          `Account Balance: ${chalk.cyan(formatAi3Amount(balanceValidation.currentBalance))} tokens`
+          `Account Balance: ${chalk.cyan(shannonsToAi3(balanceValidation.currentBalance))} tokens`
         )
       );
       console.log(
         chalk.white(
-          `Required (incl. gas): ${chalk.yellow(formatAi3Amount(balanceValidation.requiredAmount))} tokens`
+          `Required (incl. gas): ${chalk.yellow(shannonsToAi3(balanceValidation.requiredAmount))} tokens`
         )
       );
 
@@ -137,7 +137,7 @@ export class UserPrompts {
   ): Promise<'retry' | 'skip' | 'pause' | 'abort'> {
     console.log(chalk.red('\n❌ Transaction Failed'));
     console.log(chalk.white(`Address: ${chalk.cyan(record.address)}`));
-    console.log(chalk.white(`Amount: ${chalk.yellow(formatAi3Amount(record.amount))} AI3`));
+    console.log(chalk.white(`Amount: ${chalk.yellow(shannonsToAi3(record.amount))} AI3`));
     console.log(chalk.white(`Record: ${chalk.yellow(index + 1)}`));
     console.log(chalk.white(`Attempt: ${chalk.yellow(attempt)}`));
     console.log(chalk.red(`Error: ${error.message || error}`));
@@ -175,12 +175,12 @@ export class UserPrompts {
   ): Promise<'abort' | 'continue'> {
     console.log(chalk.red('\n💰 Insufficient Balance'));
     console.log(
-      chalk.white(`Distribution Amount: ${chalk.cyan(formatAi3Amount(distributionAmount))} tokens`)
+      chalk.white(`Distribution Amount: ${chalk.cyan(shannonsToAi3(distributionAmount))} tokens`)
     );
-    console.log(chalk.white(`Gas Buffer: ${chalk.cyan(formatAi3Amount(gasBuffer))} tokens`));
-    console.log(chalk.white(`Total Required: ${chalk.yellow(formatAi3Amount(required))} tokens`));
-    console.log(chalk.white(`Available: ${chalk.yellow(formatAi3Amount(available))} tokens`));
-    console.log(chalk.red(`Shortfall: ${chalk.red(formatAi3Amount(shortfall))} tokens`));
+    console.log(chalk.white(`Gas Buffer: ${chalk.cyan(shannonsToAi3(gasBuffer))} tokens`));
+    console.log(chalk.white(`Total Required: ${chalk.yellow(shannonsToAi3(required))} tokens`));
+    console.log(chalk.white(`Available: ${chalk.yellow(shannonsToAi3(available))} tokens`));
+    console.log(chalk.red(`Shortfall: ${chalk.red(shannonsToAi3(shortfall))} tokens`));
 
     const { action } = await inquirer.prompt([
       {

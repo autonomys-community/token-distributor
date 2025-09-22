@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { DistributionRecord } from '../types';
-import { formatAi3Amount } from './validation';
+import { shannonsToAi3 } from '@autonomys/auto-utils';
 
 export class CSVTransactionLogger {
   private logFilePath: string;
@@ -35,7 +35,7 @@ export class CSVTransactionLogger {
     }
 
     const rowNumber = record.sourceRowNumber || 0;
-    const amount = formatAi3Amount(record.amount);
+    const amount = shannonsToAi3(record.amount);
     const transactionHash = record.transactionHash || '';
 
     // Escape any commas or quotes in the data

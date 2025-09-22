@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { loadConfig, validateConfig } from './config';
-import { CSVValidator, ai3NumberToShannon } from './utils/validation';
+import { CSVValidator } from './utils/validation';
+import { ai3ToShannons } from '@autonomys/auto-utils';
 import { TokenDistributor } from './core/distributor';
 import { ResumeManager } from './core/resume-manager';
 import { UserPrompts } from './cli/prompts';
@@ -116,7 +117,7 @@ class TokenDistributorApp {
       const balanceValidation = await this.distributor.validateSufficientBalance(validation.totalAmount);
 
       if (!balanceValidation.sufficient) {
-        const gasBuffer = ai3NumberToShannon(this.config.gasBufferAi3);
+        const gasBuffer = ai3ToShannons(this.config.gasBufferAi3.toString());
         const action = await this.prompts.askForInsufficientBalance(
           balanceValidation.requiredAmount,
           balanceValidation.currentBalance,
