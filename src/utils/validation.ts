@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import csv from 'csv-parser';
 import Joi from 'joi';
 import { decodeAddress, encodeAddress } from '@polkadot/util-crypto';
-import { isAddress, ai3ToShannons } from '@autonomys/auto-utils';
+import { isAddress, ai3ToShannons, shannonsToAi3 } from '@autonomys/auto-utils';
 import { DistributionRecord, ValidationResult } from '../types';
 import Logger from './logger';
 
@@ -115,6 +115,7 @@ function isValidAmount(amount: string): boolean {
   return true;
 }
 
+// TODO: This will be in the SDK soon.
 /**
  * Check if amount is below existential deposit threshold
  * Note: Amounts below ED may fail for new accounts or accounts with insufficient balance,
@@ -123,18 +124,11 @@ function isValidAmount(amount: string): boolean {
  * @returns true if amount meets ED requirement
  */
 function meetsExistentialDeposit(amount: string): boolean {
-  try {
-    const shannonAmount = ai3ToShannons(amount);
-    return shannonAmount >= EXISTENTIAL_DEPOSIT_SHANNON;
-  } catch {
-    return false;
-  }
+    return ai3ToShannons(amount) >= EXISTENTIAL_DEPOSIT_SHANNON;
 }
 
 // Existential Deposit: 0.000001 AI3 = 1,000,000,000,000 Shannon
-const EXISTENTIAL_DEPOSIT_AI3 = '0.000001';
 const EXISTENTIAL_DEPOSIT_SHANNON = BigInt(1000000000000);
-
 
 export class CSVValidator {
   private logger: Logger;
@@ -209,7 +203,7 @@ export class CSVValidator {
           // Warn about amounts below existential deposit
           if (!meetsExistentialDeposit(amount)) {
             warnings.push(
-              `Line ${currentLineNumber}: Amount ${amount} AI3 is below existential deposit (${EXISTENTIAL_DEPOSIT_AI3} AI3). This may fail for new accounts or accounts with insufficient balance.`
+              `Line ${currentLineNumber}: Amount ${amount} AI3 is below existential deposit (${shannonsToAi3(EXISTENTIAL_DEPOSIT_SHANNON)} AI3). This may fail for new accounts or accounts with insufficient balance.`
             );
           }
 
