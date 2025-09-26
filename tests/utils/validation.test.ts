@@ -494,14 +494,14 @@ describe('CSV Validation', () => {
   });
 
   test('should accept amounts at existential deposit threshold', async () => {
-    const csvContent = `${testAddresses.validAutonomys},0.000001`; // Exactly ED
+    const csvContent = `${testAddresses.validAutonomys},0.00001`; // Exactly ED
 
     setMockCsvContent(csvContent);
     const result = await validator.validateCSV('mock-file.csv');
 
     expect(result.isValid).toBe(true);
     expect(result.errors).toHaveLength(0);
-    expect(result.totalAmount).toBe(1000000000000n); // ED in Shannon
+    expect(result.totalAmount).toBe(10000000000000n); // ED in Shannon
   });
 
   test('should parse validated CSV correctly', async () => {

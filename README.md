@@ -14,7 +14,7 @@ A robust, production-ready tool for distributing tokens on the Autonomys Network
 - CSV format validation
 - Address format verification (Autonomys "su" and Substrate "5" addresses)
 - Amount validation with Shannon-level precision (18 decimals)
-- Existential deposit warnings (amounts below 0.000001 AI3)
+- Existential deposit warnings (amounts below 0.00001 AI3)
 - Duplicate detection
 
 🌐 **Multi-Network Support**
@@ -88,7 +88,7 @@ su9Op4LrHeyN0FZhHSlxrvpZKqBxgGcF67WEp7Xvqof6oGS,75.25
 - One record per line
 
 **💡 Existential Deposit Notice:**
-- Amounts below **0.000001 AI3** will generate warnings
+- Amounts below **0.00001 AI3** will generate warnings
 - Such transfers may fail for new accounts or accounts with insufficient balance
 - They work fine for existing accounts with sufficient balance or smart contracts
 - The tool will proceed with distribution but notify you of potential issues

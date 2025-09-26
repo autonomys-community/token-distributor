@@ -127,7 +127,7 @@ describe('Shannon Precision Verification', () => {
     test('Mixed precision CSV processing', async () => {
       const amounts = [
         '0.000000000000000001', // 1 Shannon (minimum)
-        '0.000001',             // Existential deposit
+        '0.00001',              // Existential deposit
         '0.5',                  // 0.5 AI3
         '1.123456789012345678', // Max precision
         '1000000',              // 1 Million AI3

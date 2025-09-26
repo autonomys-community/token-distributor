@@ -127,8 +127,8 @@ function meetsExistentialDeposit(amount: string): boolean {
     return ai3ToShannons(amount) >= EXISTENTIAL_DEPOSIT_SHANNON;
 }
 
-// Existential Deposit: 0.000001 AI3 = 1,000,000,000,000 Shannon
-const EXISTENTIAL_DEPOSIT_SHANNON = BigInt(1000000000000);
+// Existential Deposit: 0.00001 AI3 = 10,000,000,000,000 Shannon
+const EXISTENTIAL_DEPOSIT_SHANNON = BigInt(10000000000000);
 
 export class CSVValidator {
   private logger: Logger;
