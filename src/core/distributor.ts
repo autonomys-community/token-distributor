@@ -100,7 +100,7 @@ export class TokenDistributor {
     // Initialize CSV logger if source filename provided
     let csvLogger: CSVTransactionLogger | undefined;
     if (sourceFilename) {
-      csvLogger = new CSVTransactionLogger(sourceFilename);
+      csvLogger = new CSVTransactionLogger(sourceFilename, this.config.network);
       await csvLogger.initialize();
       this.logger.info('CSV transaction log initialized', { logPath: csvLogger.getLogFilePath() });
     }
