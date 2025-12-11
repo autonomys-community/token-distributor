@@ -501,7 +501,7 @@ describe('CSV Validation', () => {
 
     expect(result.isValid).toBe(true);
     expect(result.errors).toHaveLength(0);
-    expect(result.totalAmount).toBe(10000000000000n); // ED in Shannon
+    expect(result.totalAmount).toBe(10000000000000n); // Consensus ED in Shannon (0.00001 AI3)
   });
 
   test('should parse validated CSV correctly', async () => {

@@ -2,7 +2,13 @@ import fs from 'fs-extra';
 import csv from 'csv-parser';
 import Joi from 'joi';
 import { decodeAddress, encodeAddress } from '@polkadot/util-crypto';
-import { isAddress, ai3ToShannons, shannonsToAi3 } from '@autonomys/auto-utils';
+import { 
+  isAddress, 
+  ai3ToShannons, 
+  shannonsToAi3,
+  meetsConsensusExistentialDepositAi3,
+  DEFAULT_CONSENSUS_EXISTENTIAL_DEPOSIT_SHANNONS
+} from '@autonomys/auto-utils';
 import { DistributionRecord, ValidationResult } from '../types';
 import Logger from './logger';
 
@@ -115,20 +121,16 @@ function isValidAmount(amount: string): boolean {
   return true;
 }
 
-// TODO: This will be in the SDK soon.
 /**
- * Check if amount is below existential deposit threshold
+ * Check if amount is below existential deposit threshold for consensus chain
  * Note: Amounts below ED may fail for new accounts or accounts with insufficient balance,
  * but are valid for existing accounts with sufficient balance or contracts
  * @param amount - Amount in AI3 as string
  * @returns true if amount meets ED requirement
  */
 function meetsExistentialDeposit(amount: string): boolean {
-    return ai3ToShannons(amount) >= EXISTENTIAL_DEPOSIT_SHANNON;
+    return meetsConsensusExistentialDepositAi3(amount);
 }
-
-// Existential Deposit: 0.00001 AI3 = 10,000,000,000,000 Shannon
-const EXISTENTIAL_DEPOSIT_SHANNON = BigInt(10000000000000);
 
 export class CSVValidator {
   private logger: Logger;
@@ -203,7 +205,7 @@ export class CSVValidator {
           // Warn about amounts below existential deposit
           if (!meetsExistentialDeposit(amount)) {
             warnings.push(
-              `Line ${currentLineNumber}: Amount ${amount} AI3 is below existential deposit (${shannonsToAi3(EXISTENTIAL_DEPOSIT_SHANNON)} AI3). This may fail for new accounts or accounts with insufficient balance.`
+              `Line ${currentLineNumber}: Amount ${amount} AI3 is below existential deposit (${shannonsToAi3(DEFAULT_CONSENSUS_EXISTENTIAL_DEPOSIT_SHANNONS)} AI3). This may fail for new accounts or accounts with insufficient balance.`
             );
           }
 
